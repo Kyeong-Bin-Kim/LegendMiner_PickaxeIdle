@@ -21,6 +21,27 @@ protected:
     virtual void BeginPlay() override;
 
 public:
+    // 곡괭이 레벨을 저장된 데이터에서 가져와 업데이트
+    void LoadPickaxeLevelFromSave();
+
+    // 곡괭이 데이터 업데이트
+    UFUNCTION()
+    void UpdatePickaxeData();
+
+    // 곡괭이 외형 설정
+    UFUNCTION()
+    void SetPickaxeMesh();
+
+    // 곡괭이를 캐릭터 손에 부착
+    UFUNCTION()
+    void AttachPickaxeToHand();
+
+    // 곡괭이 레벨 업그레이드
+    UFUNCTION(BlueprintCallable, Category = "Pickaxe")
+    void UpgradePickaxe();
+
+    float GetMiningSpeedBonus() const;
+
     // 곡괭이 레벨 (저장된 데이터에서 가져옴)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pickaxe")
     int32 PickaxeLevel;
@@ -44,22 +65,7 @@ public:
     // 현재 곡괭이 데이터
     FPickaxeData CurrentPickaxeData;
 
-    // 곡괭이 레벨을 저장된 데이터에서 가져와 업데이트
-    void LoadPickaxeLevelFromSave();
-
-    // 곡괭이 데이터 업데이트
-    UFUNCTION()
-    void UpdatePickaxeData();
-
-    // 곡괭이 외형 설정
-    UFUNCTION()
-    void SetPickaxeMesh();
-
-    // 곡괭이를 캐릭터 손에 부착
-    UFUNCTION()
-    void AttachPickaxeToHand();
-
-    // 곡괭이 레벨 업그레이드
-    UFUNCTION(BlueprintCallable, Category = "Pickaxe")
-    void UpgradePickaxe();
+private:
+    UPROPERTY(EditAnywhere, Category = "Pickaxe")
+    float MiningSpeedBonus;
 };

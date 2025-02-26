@@ -14,6 +14,8 @@ UPickaxeComponent::UPickaxeComponent()
 
     // 곡괭이 이펙트 컴포넌트 생성
     EffectComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("PickaxeEffect"));
+
+    MiningSpeedBonus = -1.0f;
 }
 
 void UPickaxeComponent::BeginPlay()
@@ -147,4 +149,17 @@ void UPickaxeComponent::UpgradePickaxe()
         UpdatePickaxeData();
         SetPickaxeMesh();
     }
+}
+
+float UPickaxeComponent::GetMiningSpeedBonus() const
+{
+    if (CurrentPickaxeData.MiningSpeedBonus)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("보너스 존재할때 : %f"), CurrentPickaxeData.MiningSpeedBonus);
+        return CurrentPickaxeData.MiningSpeedBonus;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("보너스 존재 안할때 : %f"), MiningSpeedBonus);
+
+    return MiningSpeedBonus;
 }
