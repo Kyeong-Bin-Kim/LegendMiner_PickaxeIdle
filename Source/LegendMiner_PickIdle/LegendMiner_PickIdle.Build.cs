@@ -1,5 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
+using System.IO;
 using UnrealBuildTool;
 
 public class LegendMiner_PickIdle : ModuleRules
@@ -9,12 +10,14 @@ public class LegendMiner_PickIdle : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
         PublicIncludePaths.AddRange(new string[]
-        {
-            "LegendMiner_PickIdle/Public",
-            "LegendMiner_PickIdle/Public/Characters",
-            "LegendMiner_PickIdle/Public/Components",
-            "LegendMiner_PickIdle/Public/Data",
-            "LegendMiner_PickIdle/Public/GameModes"
+         {
+            Path.Combine(ModuleDirectory, "Public"),
+            Path.Combine(ModuleDirectory, "Public/Characters"),
+            Path.Combine(ModuleDirectory, "Public/Components"),
+            Path.Combine(ModuleDirectory, "Public/Data"),
+            Path.Combine(ModuleDirectory, "Public/GameModes"),
+            Path.Combine(ModuleDirectory, "Public/Objects"),
+            Path.Combine(ModuleDirectory, "Public/SaveSystem")
         });
 
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "Niagara", "AIModule", "NavigationSystem" });

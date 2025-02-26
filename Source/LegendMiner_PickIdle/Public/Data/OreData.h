@@ -10,6 +10,9 @@ struct FOreData : public FTableRowBase
     GENERATED_USTRUCT_BODY()
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 Level;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FName ResourceID;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -29,6 +32,9 @@ struct FOreData : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TObjectPtr<UStaticMesh> Mesh;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TObjectPtr<UMaterialInterface> Material;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TObjectPtr<UTexture2D> Icon;
