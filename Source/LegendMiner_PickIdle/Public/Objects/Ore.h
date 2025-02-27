@@ -5,10 +5,10 @@
 #include "OreData.h"
 #include "Ore.generated.h"
 
-class AOreSpawner;
 class APlayerCharacter;
 class USphereComponent;
 class UStaticMeshComponent;
+class AOreSpawner;
 
 UCLASS()
 class LEGENDMINER_PICKIDLE_API AOre : public AActor
@@ -17,48 +17,40 @@ class LEGENDMINER_PICKIDLE_API AOre : public AActor
 
 public:
     AOre();
-
-protected:
     virtual void BeginPlay() override;
 
-public:
     // 광석 초기화
     void InitializeOre(int32 InOreLevel, AOreSpawner* InSpawner);
 
     // 채굴 시작
     void StartMining(APlayerCharacter* Player);
 
+    UFUNCTION(BlueprintCallable, Category = "Ore")
+    float GetMiningTime() const { return MiningTime; }
+
+    // 채굴 주기 로직 (타이머에 의해 반복 호출)
+    void MineOre();
+
     // 채굴 중단
     void StopMining();
 
-    // 광석 채굴 로직
-    void MineOre();
-
-    // 광석이 파괴될 때 처리
-    void DestroyOre();
-
-    // 외형 업데이트
-    void UpdateOreAppearance();
-
-    UPROPERTY(VisibleAnywhere, Category = "Components")
+    UPROPERTY(VisibleAnywhere, Category="Components")
     USphereComponent* OreTrigger;
 
 private:
-    int32 GetMaxOreLevel() const;
-
-    UPROPERTY(VisibleAnywhere, Category = "Components")
+    UPROPERTY(VisibleAnywhere, Category="Components")
     UStaticMeshComponent* OreMesh;
 
-
-    UPROPERTY()
     AOreSpawner* SpawnerRef;
+    APlayerCharacter* PlayerRef;
 
-    UPROPERTY(EditAnywhere, Category = "Ore")
     int32 OreLevel;
-
-    UPROPERTY(EditAnywhere, Category = "Ore")
     float OreHealth;
+    float MiningTime;
 
-    // 채굴 주기 타이머
     FTimerHandle MiningTimerHandle;
+
+    void UpdateOreAppearance();
+    int32 GetMaxOreLevel() const;
+    void DestroyOre();
 };

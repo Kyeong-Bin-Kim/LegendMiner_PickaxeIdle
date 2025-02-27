@@ -6,6 +6,7 @@
 #include "Components/SphereComponent.h"
 #include "Engine/Engine.h"
 #include "TimerManager.h"
+#include "Kismet/GameplayStatics.h"
 
 AOre::AOre()
 {
@@ -32,7 +33,7 @@ void AOre::InitializeOre(int32 InOreLevel, AOreSpawner* InSpawner)
 {
     OreLevel = InOreLevel;
     SpawnerRef = InSpawner;
-    OreHealth = 10.0f;
+    OreHealth = 10000.0f;
 
     UE_LOG(LogTemp, Warning, TEXT("AOre: Initialized with Level %d, Health: %f"), OreLevel, OreHealth);
 
@@ -56,7 +57,7 @@ void AOre::UpdateOreAppearance()
     {
         UE_LOG(LogTemp, Error, TEXT("AOre: No data found for OreLevel: %d"), OreLevel);
 
-        // 가장 높은 OreLevel 값 찾기
+        // 데이터가 없으면 가능한 최대 OreLevel 사용
         OreLevel = GetMaxOreLevel();
         RowName = FName(*FString::FromInt(OreLevel));
         Data = SpawnerRef->OreDataTable->FindRow<FOreData>(RowName, TEXT(""));
@@ -100,7 +101,6 @@ int32 AOre::GetMaxOreLevel() const
             MaxLevel = FMath::Max(MaxLevel, Level);
         }
     }
-
     return MaxLevel;
 }
 
@@ -108,42 +108,50 @@ void AOre::StartMining(APlayerCharacter* Player)
 {
     if (!Player || !SpawnerRef || !SpawnerRef->OreDataTable) return;
 
+    PlayerRef = Player;
+
     FName RowName = FName(*FString::FromInt(OreLevel));
     FOreData* OreData = SpawnerRef->OreDataTable->FindRow<FOreData>(RowName, TEXT(""));
     if (!OreData) return;
 
     float PickaxeBonus = Player->GetMiningSpeedBonus();
-    float MiningTime = OreData->MiningTime - (OreData->MiningTime * PickaxeBonus);
-    MiningTime = FMath::Max(MiningTime, 0.1f);
+
+	float CalculatedMiningTime = 0.f;
+
+    if (OreData->MiningTime <= 0.f)
+    {
+        CalculatedMiningTime = OreData->MiningTime;
+    }
+	else
+	{
+		CalculatedMiningTime = OreData->MiningTime / PickaxeBonus;
+	}
+
+    // 계산된 채굴 시간을 MiningTime에 할당
+    MiningTime = CalculatedMiningTime;
 
     if (GEngine)
     {
-        GEngine->AddOnScreenDebugMessage(
-            -1, 3.0f, FColor::Yellow,
-            FString::Printf(TEXT("채굴 보너스: %.2f 초"), PickaxeBonus)
-        );
-
-        GEngine->AddOnScreenDebugMessage(
-            -1, 3.0f, FColor::Yellow,
-            FString::Printf(TEXT("채굴 속도: %.2f 초"), MiningTime)
-        );
+        GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Yellow,
+            FString::Printf(TEXT("채굴 보너스: %.2f 초"), PickaxeBonus));
+        GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Yellow,
+            FString::Printf(TEXT("채굴 속도: %.2f 초"), CalculatedMiningTime));
     }
 
-    // 기존 타이머를 클리어하고 새롭게 설정
-    GetWorldTimerManager().ClearTimer(MiningTimerHandle);
     GetWorldTimerManager().SetTimer(MiningTimerHandle, this, &AOre::MineOre, MiningTime, true);
 
-    UE_LOG(LogTemp, Warning, TEXT("AOre: Started mining with interval: %.2f"), MiningTime);
+    UE_LOG(LogTemp, Warning, TEXT("AOre: Started mining with interval: %.2f"), CalculatedMiningTime);
 }
 
 void AOre::MineOre()
 {
     if (GEngine)
     {
-        GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, FString::Printf(TEXT("Start 광석 체력: %f"), OreHealth));
+        GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red,
+            FString::Printf(TEXT("Start Ore Health: %f"), OreHealth));
     }
 
-    OreHealth -= 1; // 체력 감소를 먼저 수행
+    OreHealth -= 1;
 
     if (OreHealth <= 0)
     {
@@ -154,7 +162,8 @@ void AOre::MineOre()
 
     if (GEngine)
     {
-        GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, FString::Printf(TEXT("End 광석 체력: %f"), OreHealth));
+        GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red,
+            FString::Printf(TEXT("End Ore Health: %f"), OreHealth));
     }
 }
 
@@ -171,5 +180,10 @@ void AOre::DestroyOre()
         SpawnerRef->ReplaceOre(this);
     }
 
+    APlayerCharacter* Player = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+    if (Player)
+    {
+        Player->StopMining();
+    }
     Destroy();
 }

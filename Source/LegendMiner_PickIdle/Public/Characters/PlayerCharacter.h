@@ -4,8 +4,9 @@
 #include "GameFramework/Character.h"
 #include "PlayerCharacter.generated.h"
 
-class AOre;
 class UAnimMontage;
+class AOre;
+class UPickaxeComponent;
 
 UCLASS()
 class LEGENDMINER_PICKIDLE_API APlayerCharacter : public ACharacter
@@ -18,17 +19,42 @@ public:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
 
+    // 이동할 타겟 위치 설정
     UFUNCTION(BlueprintCallable, Category = "Movement")
     void SetTargetLocation(const FVector& NewTargetLocation);
 
+    // 채굴 보너스 (PickaxeComponent 등에서 가져옴)
     UFUNCTION(BlueprintCallable, Category = "Pickaxe")
     float GetMiningSpeedBonus() const;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
-    float Speed;
+    // 실제 채굴 시간
+    UFUNCTION(BlueprintCallable, Category = "Pickaxe")
+    float GetMiningSpeed() const;
+
+    // 채굴 중단 시 애니메이션 정지
+    UFUNCTION(BlueprintCallable, Category = "Pickaxe")
+    void StopMining();
+
+protected:
+    // 채굴 몽타주
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+    UAnimMontage* MiningMontage;
+
+    // 카메라 관련
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+    class USpringArmComponent* SpringArm;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+    class UCameraComponent* Camera;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pickaxe")
+    UPickaxeComponent* PickaxeComponent;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+    float AcceptableDistance = 50.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-    float CameraDistance = 450.0f;
+    float CameraDistance = 450.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
     FVector CameraLotation = FVector(0.0f, 0.0f, 200.0f);
@@ -36,30 +62,23 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
     FRotator CameraRotation = FRotator(-30.0f, 0.0f, 0.0f);
 
-protected:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-    float AcceptableDistance = 50.f;
+    // 이동/채굴 관련 플래그
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Mining")
+    bool bMining;
 
+public:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
+    float Speed;
+
+private:
+    AOre* TargetOre;
     FVector TargetLocation;
     bool bMovingToTarget;
     float CurrentSpeed;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-    class USpringArmComponent* SpringArm;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-    class UCameraComponent* Camera;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pickaxe")
-	class UPickaxeComponent* PickaxeComponent;
-
-private:
-    AOre* TargetOre; // 가장 가까운 광석 저장
     bool bLookingAtOre;
-    FTimerHandle LookAtOreTimer;
-    FTimerHandle MiningTimer;
 
+    float CurrentMiningSpeed; // 필요에 따라 사용
     void FindClosestOre();
     void RotateTowardsOre(float DeltaTime);
-    void StartMining();
+    void StartMining();       // 오브젝트와 실제 채굴 로직 시작
 };
