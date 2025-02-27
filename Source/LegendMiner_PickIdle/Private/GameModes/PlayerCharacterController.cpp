@@ -53,3 +53,16 @@ void APlayerCharacterController::OnClickMove(const FInputActionValue& Value)
         CachedPlayerCharacter->SetTargetLocation(HitResult.Location);
     }
 }
+
+void APlayerCharacterController::CloseMainMenu()
+{
+    // 게임 입력 모드로 변경
+    FInputModeGameOnly GameMode;
+    SetInputMode(GameMode);
+
+    bShowMouseCursor = false;
+
+    // 플레이어 입력 활성화
+    SetIgnoreLookInput(false);
+    SetIgnoreMoveInput(false);
+}

@@ -1,0 +1,2 @@
+#include "GameModes/LegendMinerGameInstance.h"
+

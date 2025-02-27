@@ -36,10 +36,6 @@ public:
     void StopMining();
 
 protected:
-    // 채굴 몽타주
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
-    UAnimMontage* MiningMontage;
-
     // 카메라 관련
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
     class USpringArmComponent* SpringArm;

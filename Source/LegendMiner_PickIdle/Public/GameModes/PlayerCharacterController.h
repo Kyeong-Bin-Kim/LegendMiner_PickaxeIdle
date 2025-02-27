@@ -18,6 +18,10 @@ class LEGENDMINER_PICKIDLE_API APlayerCharacterController : public APlayerContro
 public:
     APlayerCharacterController();
 
+    // UI 닫기 및 게임 입력 활성화
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void CloseMainMenu();
+
 protected:
     virtual void BeginPlay() override;
     virtual void SetupInputComponent() override;

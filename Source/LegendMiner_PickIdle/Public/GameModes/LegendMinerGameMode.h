@@ -11,7 +11,4 @@ class LEGENDMINER_PICKIDLE_API ALegendMinerGameMode : public AGameModeBase
 
 public:
     ALegendMinerGameMode();
-
-protected:
-    virtual void BeginPlay() override;
 };
