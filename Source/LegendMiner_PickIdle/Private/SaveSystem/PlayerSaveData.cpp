@@ -1,5 +1,6 @@
 #include "PlayerSaveData.h"
 #include "Kismet/GameplayStatics.h"
+#include "Ore.h"
 
 UPlayerSaveData::UPlayerSaveData()
 {
@@ -11,7 +12,7 @@ UPlayerSaveData::UPlayerSaveData()
 // 저장 데이터 초기화
 void UPlayerSaveData::InitializeSaveData()
 {
-    PickaxeLevel = 14;  // 기본 곡괭이 레벨
+    PickaxeLevel = 1;  // 기본 곡괭이 레벨
     PlayerGold = 0;    // 초기 골드
     OreInventory.Empty(); // 광석 인벤토리 초기화
 }
@@ -27,9 +28,12 @@ void UPlayerSaveData::SaveGameData()
     {
         UE_LOG(LogTemp, Error, TEXT("PlayerSaveData: Save failed!"));
     }
+
+    // UI가 변경 사항을 감지할 수 있도록 이벤트 실행
+    OnOreDataUpdated.Broadcast();
 }
 
-// 게임 로드 기능
+// 게임 로드 기능 (GameInstance에서 관리)
 UPlayerSaveData* UPlayerSaveData::LoadGameData()
 {
     if (UGameplayStatics::DoesSaveGameExist(TEXT("PlayerSaveSlot"), 0))
@@ -81,13 +85,14 @@ void UPlayerSaveData::AddOreToInventory(FName OreID, int32 Amount)
         {
             Item.Quantity += Amount;
             SaveGameData();
+            OnOreDataUpdated.Broadcast(); // UI 갱신 이벤트 발생
             return;
         }
     }
 
-    // 기존에 없으면 새로 추가
     OreInventory.Add(FOreInventoryItem(OreID, Amount));
     SaveGameData();
+    OnOreDataUpdated.Broadcast(); // UI 갱신 이벤트 발생
 }
 
 // 특정 광석 개수 반환
@@ -103,33 +108,55 @@ int32 UPlayerSaveData::GetOreQuantity(FName OreID) const
     return 0;
 }
 
-// 광석 판매 (골드 추가 후 광석 차감)
-void UPlayerSaveData::SellOre(FName OreID, int32 Amount, int32 SellPrice)
+// 모든 광석 데이터 반환 (UI 갱신용)
+const TArray<FOreInventoryItem>& UPlayerSaveData::GetAllOreData() const
 {
+    return OreInventory;
+}
+
+// 광석 판매 (골드 추가 후 광석 차감)
+void UPlayerSaveData::SellOre(FName OreID, int32 SellPrice)
+{
+    int32 OreLevel = FCString::Atoi(*OreID.ToString()); // 광석 ID를 숫자로 변환
+
+    // 판매 조건: 광석 레벨이 (곡괭이 레벨 - 1) 이하이거나, 곡괭이 레벨이 1일 경우 레벨 1 광석 판매 가능
+    if (!(OreLevel <= PickaxeLevel - 1 || (PickaxeLevel == 1 && OreLevel == 1)))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Cannot sell Ore ID %s because it's higher than the allowed level!"), *OreID.ToString());
+        return;
+    }
+
     for (int32 i = 0; i < OreInventory.Num(); i++)
     {
         if (OreInventory[i].OreID == OreID)
         {
-            if (OreInventory[i].Quantity >= Amount)
-            {
-                OreInventory[i].Quantity -= Amount;
-                PlayerGold += SellPrice * Amount;
-                UE_LOG(LogTemp, Warning, TEXT("Sold %d of %s. New Gold: %d"), Amount, *OreID.ToString(), PlayerGold);
+            int32 Amount = OreInventory[i].Quantity; // 모든 개수 판매
+            OreInventory[i].Quantity = 0; // 개수 0으로 설정
+            PlayerGold += SellPrice * Amount; // 골드 증가
 
-                // 개수가 0이면 배열에서 제거
-                if (OreInventory[i].Quantity <= 0)
+            UE_LOG(LogTemp, Warning, TEXT("Sold all %d of %s. New Gold: %d"), Amount, *OreID.ToString(), PlayerGold);
+
+			OreInventory.RemoveAt(i); // 광석 인벤토리에서 제거
+
+            SaveGameData(); // 데이터 저장
+
+
+            // 판매 후 모든 AOre 인스턴스의 `CachedSaveData` 갱신
+            TArray<AActor*> Ores;
+            UGameplayStatics::GetAllActorsOfClass(GWorld, AOre::StaticClass(), Ores);
+            for (AActor* OreActor : Ores)
+            {
+                AOre* Ore = Cast<AOre>(OreActor);
+                if (Ore)
                 {
-                    OreInventory.RemoveAt(i);
+                    Ore->RefreshSaveData();
                 }
             }
-            else
-            {
-                UE_LOG(LogTemp, Warning, TEXT("Not enough ore to sell!"));
-            }
+
+            OnOreDataUpdated.Broadcast();// 광석 UI 갱신 이벤트 발생
             return;
         }
     }
 
     UE_LOG(LogTemp, Warning, TEXT("Ore not found in inventory!"));
 }
-

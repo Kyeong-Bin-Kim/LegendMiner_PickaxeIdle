@@ -8,6 +8,7 @@
 #include "TimerManager.h"
 #include "Components/SphereComponent.h"
 #include "Animation/AnimInstance.h"
+#include "LegendMinerHUD.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -55,13 +56,21 @@ void APlayerCharacter::BeginPlay()
 
     // Pickaxe 컴포넌트 찾기
     PickaxeComponent = FindComponentByClass<UPickaxeComponent>();
-    if (PickaxeComponent)
+
+	// 인벤토리 위젯 찾기
+    APlayerController* PlayerController = Cast<APlayerController>(GetController());
+    if (PlayerController)
     {
-        UE_LOG(LogTemp, Warning, TEXT("PickaxeComponent found!"));
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("PickaxeComponent not found!"));
+        ALegendMinerHUD* HUD = Cast<ALegendMinerHUD>(PlayerController->GetHUD());
+        if (HUD && HUD->PlayerInventoryWidgetInstance)
+        {
+            CachedInventoryWidget = HUD->PlayerInventoryWidgetInstance;
+            UE_LOG(LogTemp, Warning, TEXT("Cached PlayerInventoryWidget Successfully!"));
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("Failed to cache PlayerInventoryWidget!"));
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 #include "MainMenuWidget.h"
-#include "LegendMinerHUD.h"
+#include "PlayerSaveData.h"
+#include "LegendMinerGameInstance.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
@@ -63,19 +64,14 @@ void UMainMenuWidget::CloseMainMenu()
 {
     UE_LOG(LogTemp, Warning, TEXT("Closing Main Menu and switching to Game Input Mode"));
 
+    ULegendMinerGameInstance* GameInstance = Cast<ULegendMinerGameInstance>(GetGameInstance());
+
+    if (GameInstance)
+    {
+        GameInstance->bMainMenuCloseInitialized = true;
+    }
+
     this->RemoveFromViewport();  // UI 제거
-
-    // 플레이어 컨트롤러에서 입력 모드 변경
-    APlayerController* PC = GetWorld()->GetFirstPlayerController();
-    if (PC)
-    {
-
-        UE_LOG(LogTemp, Warning, TEXT("Switched to Game Input Mode"));
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("Failed to get PlayerController!"));
-    }
 }
 
 
@@ -86,15 +82,31 @@ void UMainMenuWidget::OnStartGameClicked()
 
     bool bHasSaveData = UGameplayStatics::DoesSaveGameExist(TEXT("PlayerSaveSlot"), 0);
 
+    // 기존 세이브 데이터 삭제
     if (bHasSaveData)
     {
         UE_LOG(LogTemp, Warning, TEXT("Deleting existing save data..."));
         UGameplayStatics::DeleteGameInSlot(TEXT("PlayerSaveSlot"), 0);
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("Calling CloseMainMenu()..."));
-    CloseMainMenu();  // UI 제거 요청
+    // 새로운 세이브 데이터 생성
+    UPlayerSaveData* NewSaveData = NewObject<UPlayerSaveData>();
+    if (NewSaveData)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Creating new save data..."));
+        NewSaveData->InitializeSaveData();
+        NewSaveData->SaveGameData();  // 새 데이터 즉시 저장
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to create new save data!"));
+    }
 
+    // UI 제거
+    UE_LOG(LogTemp, Warning, TEXT("Calling CloseMainMenu()..."));
+    CloseMainMenu();
+
+    // 선택된 레벨로 이동
     if (LevelToLoad.IsValid())
     {
         UE_LOG(LogTemp, Warning, TEXT("Loading level: %s"), *LevelToLoad->GetName());

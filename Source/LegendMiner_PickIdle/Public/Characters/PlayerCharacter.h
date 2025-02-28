@@ -2,9 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "PlayerInventoryWidget.h"
 #include "PlayerCharacter.generated.h"
 
-class UAnimMontage;
 class AOre;
 class UPickaxeComponent;
 
@@ -47,7 +47,7 @@ protected:
     UPickaxeComponent* PickaxeComponent;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-    float AcceptableDistance = 50.f;
+    float AcceptableDistance = 100.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
     float CameraDistance = 450.f;
@@ -63,10 +63,14 @@ protected:
     bool bMining;
 
 public:
+    UPROPERTY()
+    UPlayerInventoryWidget* CachedInventoryWidget;
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
     float Speed;
 
 private:
+
     AOre* TargetOre;
     FVector TargetLocation;
     bool bMovingToTarget;

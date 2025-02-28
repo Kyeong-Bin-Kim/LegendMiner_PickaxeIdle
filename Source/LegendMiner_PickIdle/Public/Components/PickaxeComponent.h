@@ -9,7 +9,7 @@
 class UPlayerSaveData;
 class UStaticMeshComponent;
 
-UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
+UCLASS(meta = (BlueprintSpawnableComponent))
 class LEGENDMINER_PICKIDLE_API UPickaxeComponent : public UActorComponent
 {
     GENERATED_BODY()

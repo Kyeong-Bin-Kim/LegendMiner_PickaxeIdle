@@ -13,7 +13,7 @@ class LEGENDMINER_PICKIDLE_API UMainMenuWidget : public UUserWidget
 public:
     virtual bool Initialize() override;
 
-    // 🔹 블루프린트에서 레벨을 직접 선택할 수 있도록 설정
+    // 블루프린트에서 레벨을 직접 선택할 수 있도록 설정
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game", meta = (AllowedClasses = "World"))
     TSoftObjectPtr<UWorld> LevelToLoad;
 

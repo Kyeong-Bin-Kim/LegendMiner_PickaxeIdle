@@ -2,6 +2,8 @@
 #include "OreSpawner.h"
 #include "PlayerCharacter.h"
 #include "PickaxeComponent.h"
+#include "PlayerSaveData.h"
+#include "PlayerInventoryWidget.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "Engine/Engine.h"
@@ -27,6 +29,23 @@ AOre::AOre()
 void AOre::BeginPlay()
 {
     Super::BeginPlay();
+
+    // 플레이어 저장 데이터를 한 번만 캐싱
+    CachedSaveData = UPlayerSaveData::LoadGameData();
+
+    // 플레이어 캐싱
+    PlayerRef = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+
+    if (!CachedSaveData)
+    {
+        UE_LOG(LogTemp, Error, TEXT("AOre: Failed to cache PlayerSaveData!"));
+    }
+
+    if (!PlayerRef)
+    {
+        UE_LOG(LogTemp, Error, TEXT("AOre: Failed to cache PlayerCharacter!"));
+    }
+
 }
 
 void AOre::InitializeOre(int32 InOreLevel, AOreSpawner* InSpawner)
@@ -118,7 +137,7 @@ void AOre::StartMining(APlayerCharacter* Player)
 
 	float CalculatedMiningTime = 0.f;
 
-    if (OreData->MiningTime <= 0.f)
+    if (PickaxeBonus <= 0.f)
     {
         CalculatedMiningTime = OreData->MiningTime;
     }
@@ -153,11 +172,35 @@ void AOre::MineOre()
 
     OreHealth -= 1;
 
+    // OreHealth가 0 이하이면 즉시 삭제
     if (OreHealth <= 0)
     {
         StopMining();
         DestroyOre();
         return;
+    }
+
+    // UI 업데이트
+    if (PlayerRef)
+    {
+        if (CachedSaveData)
+        {
+            FName MinedOreID = FName(*FString::FromInt(OreLevel));
+
+            CachedSaveData->AddOreToInventory(MinedOreID, 1);
+
+            int32 GetQuantity = CachedSaveData->GetOreQuantity(MinedOreID);
+
+            PlayerRef->CachedInventoryWidget->UpdateSingleOreQuantity(MinedOreID, GetQuantity);
+
+            GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green,
+                FString::Printf(TEXT("AOre: Live Update Inventory UI for OreID: %s, Quantity: %d"), *MinedOreID.ToString(), GetQuantity));
+            UE_LOG(LogTemp, Warning, TEXT("AOre: Live Update Inventory UI for OreID: %s, Quantity: %d"), *MinedOreID.ToString(), GetQuantity);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("AOre: CachedInventoryWidget is NULL!"));
+        }
     }
 
     if (GEngine)
@@ -172,6 +215,20 @@ void AOre::StopMining()
     GetWorldTimerManager().ClearTimer(MiningTimerHandle);
     UE_LOG(LogTemp, Warning, TEXT("AOre: Mining stopped."));
 }
+
+void AOre::RefreshSaveData()
+{
+    CachedSaveData = UPlayerSaveData::LoadGameData();
+    if (CachedSaveData)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("AOre: Cached SaveData refreshed successfully!"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("AOre: Failed to refresh Cached SaveData!"));
+    }
+}
+
 
 void AOre::DestroyOre()
 {
