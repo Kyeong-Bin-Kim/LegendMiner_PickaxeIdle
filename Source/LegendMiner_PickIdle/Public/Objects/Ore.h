@@ -59,12 +59,10 @@ private:
     UPlayerSaveData* CachedSaveData;
 
     int32 OreLevel;
-    float OreHealth;
     float MiningTime;
 
     FTimerHandle MiningTimerHandle;
 
     void UpdateOreAppearance();
     int32 GetMaxOreLevel() const;
-    void DestroyOre();
 };

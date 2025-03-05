@@ -52,9 +52,8 @@ void AOre::InitializeOre(int32 InOreLevel, AOreSpawner* InSpawner)
 {
     OreLevel = InOreLevel;
     SpawnerRef = InSpawner;
-    OreHealth = 10000.0f;
 
-    UE_LOG(LogTemp, Warning, TEXT("AOre: Initialized with Level %d, Health: %f"), OreLevel, OreHealth);
+    UE_LOG(LogTemp, Warning, TEXT("AOre: Initialized with Level %d"), OreLevel);
 
     Tags.Add(FName("Ore"));
 
@@ -141,7 +140,7 @@ void AOre::StartMining(APlayerCharacter* Player)
     {
         CalculatedMiningTime = OreData->MiningTime;
     }
-	else
+    else
 	{
 		CalculatedMiningTime = OreData->MiningTime / PickaxeBonus;
 	}
@@ -157,29 +156,13 @@ void AOre::StartMining(APlayerCharacter* Player)
             FString::Printf(TEXT("채굴 속도: %.2f 초"), CalculatedMiningTime));
     }
 
-    GetWorldTimerManager().SetTimer(MiningTimerHandle, this, &AOre::MineOre, MiningTime, true);
+    GetWorldTimerManager().SetTimer(MiningTimerHandle, this, &AOre::MineOre, MiningTime * 1.166667, true);
 
     UE_LOG(LogTemp, Warning, TEXT("AOre: Started mining with interval: %.2f"), CalculatedMiningTime);
 }
 
 void AOre::MineOre()
 {
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red,
-            FString::Printf(TEXT("Start Ore Health: %f"), OreHealth));
-    }
-
-    OreHealth -= 1;
-
-    // OreHealth가 0 이하이면 즉시 삭제
-    if (OreHealth <= 0)
-    {
-        StopMining();
-        DestroyOre();
-        return;
-    }
-
     // UI 업데이트
     if (PlayerRef)
     {
@@ -192,28 +175,17 @@ void AOre::MineOre()
             int32 GetQuantity = CachedSaveData->GetOreQuantity(MinedOreID);
 
             PlayerRef->CachedInventoryWidget->UpdateSingleOreQuantity(MinedOreID, GetQuantity);
-
-            GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green,
-                FString::Printf(TEXT("AOre: Live Update Inventory UI for OreID: %s, Quantity: %d"), *MinedOreID.ToString(), GetQuantity));
-            UE_LOG(LogTemp, Warning, TEXT("AOre: Live Update Inventory UI for OreID: %s, Quantity: %d"), *MinedOreID.ToString(), GetQuantity);
         }
         else
         {
             UE_LOG(LogTemp, Warning, TEXT("AOre: CachedInventoryWidget is NULL!"));
         }
     }
-
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red,
-            FString::Printf(TEXT("End Ore Health: %f"), OreHealth));
-    }
 }
 
 void AOre::StopMining()
 {
     GetWorldTimerManager().ClearTimer(MiningTimerHandle);
-    UE_LOG(LogTemp, Warning, TEXT("AOre: Mining stopped."));
 }
 
 void AOre::RefreshSaveData()
@@ -227,20 +199,4 @@ void AOre::RefreshSaveData()
     {
         UE_LOG(LogTemp, Error, TEXT("AOre: Failed to refresh Cached SaveData!"));
     }
-}
-
-
-void AOre::DestroyOre()
-{
-    if (SpawnerRef)
-    {
-        SpawnerRef->ReplaceOre(this);
-    }
-
-    APlayerCharacter* Player = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-    if (Player)
-    {
-        Player->StopMining();
-    }
-    Destroy();
 }

@@ -23,6 +23,14 @@ void ALegendMinerHUD::BeginPlay()
             if (PlayerInventoryWidgetInstance)
             {
                 PlayerInventoryWidgetInstance->AddToViewport();
+
+                UPlayerSaveData* PlayerSaveData = UPlayerSaveData::LoadGameData();
+                if (PlayerSaveData)
+                {
+                    PlayerInventoryWidgetInstance->UpdateInventoryList();
+                    PlayerInventoryWidgetInstance->UpdateGold(PlayerSaveData->GetPlayerGold());
+                    PlayerInventoryWidgetInstance->UpdatePickaxeUpgradeUI();
+                }
             }
         }
     }

@@ -35,6 +35,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Pickaxe")
     void StopMining();
 
+    UFUNCTION(BlueprintCallable, Category = "Pickaxe")
+    UPickaxeComponent* GetPickaxeComponent() const;
+
 protected:
     // 카메라 관련
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")

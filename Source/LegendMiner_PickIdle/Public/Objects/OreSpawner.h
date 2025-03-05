@@ -21,25 +21,32 @@ protected:
     virtual void BeginPlay() override;
 
     // NavMesh 업데이트
+    UFUNCTION()
     void UpdateNavMesh();
 
 private:
     // 박스 콜리전 찾아서 등록
+    UFUNCTION()
     void FindSpawnBoxes();
 
     // 플레이어의 곡괭이 레벨을 가져오는 함수
+    UFUNCTION()
     int32 GetPlayerPickaxeLevel();
 
     // 광석 초기 스폰
+    UFUNCTION()
     void SpawnInitialOres();
 
     // 박스 콜리전 내부에서 랜덤한 위치 반환
+    UFUNCTION()
     FVector GetRandomSpawnLocation();
 
-    // 최대 광석 레벨 반환 
+    // 최대 광석 레벨 반환
+    UFUNCTION()
     int32 GetMaxOreLevel(int32 PlayerPickaxeLevel);
 
     // 플레이어 곡괭이 레벨 이하의 랜덤 광석 레벨 반환
+    UFUNCTION()
     int32 GetRandomOreLevel(int32 PlayerPickaxeLevel);
 
 public:
@@ -48,7 +55,12 @@ public:
     UDataTable* OreDataTable;
 
     // 특정 광석이 파괴되었을 때 새로운 광석을 생성
+    UFUNCTION()
     void ReplaceOre(AOre* DestroyedOre);
+
+	// 모든 광석 재생성
+    UFUNCTION()
+    void RespawnAllOres();
 
 private:
 

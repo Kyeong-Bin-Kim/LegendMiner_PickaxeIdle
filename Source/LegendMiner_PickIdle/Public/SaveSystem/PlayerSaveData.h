@@ -72,6 +72,12 @@ public:
     UFUNCTION()
     void AddOreToInventory(FName OreID, int32 Amount);
 
+    UFUNCTION()
+    void RemoveOreFromInventory(FName OreID, int32 Amount);
+
+    UFUNCTION()
+    void SubtractGold(int32 Amount);
+
     // 특정 광석 개수 반환
     UFUNCTION()
     int32 GetOreQuantity(FName OreID) const;

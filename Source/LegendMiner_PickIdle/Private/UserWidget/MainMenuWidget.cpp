@@ -71,7 +71,7 @@ void UMainMenuWidget::CloseMainMenu()
         GameInstance->bMainMenuCloseInitialized = true;
     }
 
-    this->RemoveFromViewport();  // UI 제거
+    this->RemoveFromParent();  // UI 제거
 }
 
 

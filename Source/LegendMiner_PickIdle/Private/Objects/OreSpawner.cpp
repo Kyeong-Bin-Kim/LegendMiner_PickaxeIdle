@@ -48,10 +48,12 @@ void AOreSpawner::UpdateNavMesh()
     {
         NavSystem->Build();
         UE_LOG(LogTemp, Warning, TEXT("AOreSpawner: NavMesh has been rebuilt."));
+		GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green, TEXT("NavMesh has been rebuilt."));
     }
     else
     {
         UE_LOG(LogTemp, Error, TEXT("AOreSpawner: Failed to get NavigationSystem!"));
+		GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, TEXT("Failed to get NavigationSystem!"));
     }
 }
 
@@ -279,4 +281,27 @@ void AOreSpawner::ReplaceOre(AOre* DestroyedOre)
                 }
             }
         }, 30.0f, false);
+}
+
+void AOreSpawner::RespawnAllOres()
+{
+    if (!GetWorld()) return;
+
+    // 기존 광석 제거
+    for (AOre* Ore : ActiveOres)
+    {
+        if (Ore)
+        {
+            Ore->Destroy();
+        }
+    }
+    ActiveOres.Empty(); // 리스트 초기화
+
+    UE_LOG(LogTemp, Warning, TEXT("AOreSpawner: All ores have been destroyed."));
+
+    // 새로운 광석 생성
+    SpawnInitialOres();
+
+    // NavMesh 업데이트 (광석이 새롭게 배치될 경우 AI 이동 경로 수정 필요)
+    UpdateNavMesh();
 }

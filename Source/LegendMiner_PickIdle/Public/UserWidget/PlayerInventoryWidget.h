@@ -5,6 +5,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "OreInventoryItem.h"
 #include "OreData.h"
+#include "PickaxeData.h"
 #include "Components/Border.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
@@ -35,10 +36,19 @@ public:
     void UpdateInventoryList();
 
     UFUNCTION()
+    void UpdatePickaxeUpgradeUI();
+
+    UFUNCTION()
     void UpdateGold(int32 NewGoldAmount);
 
     UFUNCTION()
     void OnSellOreClicked();
+
+    UFUNCTION()
+    void OnAllSellOreClicked();
+
+    UFUNCTION()
+    void OnUpgradePickaxeClicked();
 
     UFUNCTION(BlueprintCallable, Category = "UI")
     void UpdateSingleOreQuantity(FName OreID, int32 NewQuantity);
@@ -80,6 +90,18 @@ protected:
     UPROPERTY(meta = (BindWidget))
     UVerticalBox* OreListContainer;
 
+    UPROPERTY(meta = (BindWidget))
+    UBorder* PickaxeUpgradeBorder;
+
+    UPROPERTY(meta = (BindWidget))
+    UImage* UpgradeOreIcon;
+
+    UPROPERTY(meta = (BindWidget))
+    UTextBlock* UpgradeOreQuantityText;
+
+    UPROPERTY(meta = (BindWidget))
+    UTextBlock* UpgradeMoneyQuantityText;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
     float ListPadding = 10.0f;
 
@@ -92,7 +114,19 @@ protected:
     UPROPERTY(meta = (BindWidget))
     UButton* SellOreButton;
 
+    UPROPERTY(meta = (BindWidget))
+    UButton* AllSellOreButton;
+
+    UPROPERTY(meta = (BindWidget))
+    UButton* UpgradePickaxeButton;
+
+    UPROPERTY(meta = (BindWidget))
+    UTextBlock* UpgradePickaxeButtonText;
+
     // 데이터 테이블 속성 추가 (블루프린트에서 설정 가능)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Data")
     UDataTable* OreDataTable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Data")
+    UDataTable* PickaxeDataTable;
 };

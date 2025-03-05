@@ -3,6 +3,7 @@
 #include "GameFramework/Character.h"
 #include "Components/StaticMeshComponent.h"
 #include "NiagaraComponent.h"
+#include "OreSpawner.h"
 #include "Kismet/GameplayStatics.h"
 
 UPickaxeComponent::UPickaxeComponent()
@@ -139,27 +140,82 @@ void UPickaxeComponent::AttachPickaxeToHand()
 // 곡괭이 레벨 업그레이드
 void UPickaxeComponent::UpgradePickaxe()
 {
-    if (PlayerSaveData)
-    {
-        PickaxeLevel += 1;
-        PlayerSaveData->PickaxeLevel = PickaxeLevel;
-        PlayerSaveData->SaveGameData(); // 즉시 저장
+    PlayerSaveData = UPlayerSaveData::LoadGameData();
 
-        // 업그레이드 후 외형 업데이트
-        UpdatePickaxeData();
-        SetPickaxeMesh();
+    int32 CurrentPickaxeLevel = PlayerSaveData->GetPickaxeLevel();
+    FName NextPickaxeRowName = FName(*FString::FromInt(CurrentPickaxeLevel + 1));
+
+    // 다음 레벨의 곡괭이 데이터 찾기
+    FPickaxeData* NextPickaxeData = PickaxeDataTable->FindRow<FPickaxeData>(NextPickaxeRowName, TEXT("Pickaxe Upgrade Lookup"));
+    if (!NextPickaxeData)
+    {
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red,
+                FString::Printf(TEXT("No upgrade data found for Pickaxe Level %d"), CurrentPickaxeLevel + 1));
+        }
+        return;
     }
+
+    // 필요한 광석과 골드 정보 가져오기
+    int32 RequiredOre = NextPickaxeData->UpgradeCostOre;
+    int32 RequiredGold = NextPickaxeData->UpgradeCostGold;
+
+    FName RequiredOreID = FName(*FString::FromInt(CurrentPickaxeLevel)); // 현재 곡괭이 레벨과 동일한 광석 필요
+
+    int32 PlayerOreQuantity = PlayerSaveData->GetOreQuantity(RequiredOreID);
+    int32 PlayerGold = PlayerSaveData->GetPlayerGold();
+
+    // 업그레이드 조건 확인 (광석 & 골드 충분한지 체크)
+    if (PlayerOreQuantity < RequiredOre)
+    {
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red,
+                FString::Printf(TEXT("Not enough ore! Required: %d, Owned: %d"), RequiredOre, PlayerOreQuantity));
+        }
+        return;
+    }
+
+    if (PlayerGold < RequiredGold)
+    {
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red,
+                FString::Printf(TEXT("Not enough gold! Required: %d, Owned: %d"), RequiredGold, PlayerGold));
+        }
+        return;
+    }
+
+    // 비용 차감
+    PlayerSaveData->RemoveOreFromInventory(RequiredOreID, RequiredOre);
+    PlayerSaveData->SubtractGold(RequiredGold);
+
+    // 곡괭이 업그레이드 실행
+    PickaxeLevel = CurrentPickaxeLevel + 1;
+    PlayerSaveData->SetPickaxeLevel(CurrentPickaxeLevel + 1);
+
+    // 광석 스포너를 찾아 `RespawnAllOres()` 호출 (광석을 직접 관리하지 않음)
+    AOreSpawner* OreSpawner = Cast<AOreSpawner>(UGameplayStatics::GetActorOfClass(GetWorld(), AOreSpawner::StaticClass()));
+    if (OreSpawner)
+    {
+        OreSpawner->RespawnAllOres();
+    }
+
+    // 업그레이드 후 채굴 속도 다시 적용
+    UpdatePickaxeData();
+
+    // 곡괭이 외형 변경
+    SetPickaxeMesh();
 }
+
 
 float UPickaxeComponent::GetMiningSpeedBonus() const
 {
     if (CurrentPickaxeData.MiningSpeedBonus)
     {
-        UE_LOG(LogTemp, Warning, TEXT("보너스 존재할때 : %f"), CurrentPickaxeData.MiningSpeedBonus);
         return CurrentPickaxeData.MiningSpeedBonus;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("보너스 존재 안할때 : %f"), MiningSpeedBonus);
-
-    return MiningSpeedBonus;
+    return 0.0f;
 }

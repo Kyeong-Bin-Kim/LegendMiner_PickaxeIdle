@@ -144,8 +144,7 @@ float APlayerCharacter::GetMiningSpeedBonus() const
         return PickaxeComponent->GetMiningSpeedBonus();
     }
 
-    // 컴포넌트가 없으면 1.0(보너스 없음)
-    return 1.0f;
+    return 0.0f;
 }
 
 float APlayerCharacter::GetMiningSpeed() const
@@ -229,4 +228,9 @@ void APlayerCharacter::StopMining()
         TargetOre->StopMining();
         TargetOre = nullptr; // 필요하다면, 더 이상 타겟이 없음을 표시
     }
+}
+
+UPickaxeComponent* APlayerCharacter::GetPickaxeComponent() const
+{
+    return PickaxeComponent;
 }
