@@ -58,7 +58,7 @@ private:
 
     // 최대 광석 개수
     UPROPERTY(EditAnywhere, Category = "Spawning")
-    int32 MaxOreCount = 10;
+    int32 MaxOreCount = 50;
 
     // 스폰할 수 있는 박스 콜리전들
     TArray<UBoxComponent*> SpawnBoxes;
