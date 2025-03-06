@@ -66,6 +66,51 @@ void ALegendMinerHUD::BeginPlay()
     }
 }
 
+void ALegendMinerHUD::ShowMessage(const FText& Message, bool bShowCancelButton, UObject* CallbackListener, FName CallbackFunctionName,
+    const FText& ConfirmText, const FText& CancelText)
+{
+
+    if (!MessageWidgetClass || !CallbackListener)
+    {
+        return;
+    }
+
+    UMessageWidget* MessageWidget = CreateWidget<UMessageWidget>(GetWorld(), MessageWidgetClass);
+    if (MessageWidget)
+    {
+        // 메시지 및 버튼 텍스트 설정 (기본값은 MessageWidget 내에서 NSLOCTEXT를 통해 지정됨)
+        MessageWidget->SetupMessage(Message, bShowCancelButton, ConfirmText, CancelText);
+
+        // FScriptDelegate를 사용하여 FName으로 UFUNCTION을 바인딩합니다.
+        FScriptDelegate ScriptDelegate;
+        ScriptDelegate.BindUFunction(CallbackListener, CallbackFunctionName);
+        MessageWidget->OnMessageConfirmed.AddUnique(ScriptDelegate);
+
+        MessageWidget->AddToViewport();
+    }
+}
+
+void ALegendMinerHUD::OnMessageConfirmedHandler(bool bConfirmed)
+{
+    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "OnMessageConfirmedHandler");
+
+    if (MessageWidgetInstance)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "MessageWidgetInstance");
+        MessageWidgetInstance = nullptr; // 안전하게 NULL로 설정하여 재사용 가능하도록 함.
+    }
+
+    if (bConfirmed)
+    {
+        // 확인 버튼을 클릭했을 때 실행할 추가 로직
+    }
+    else
+    {
+        // 취소 버튼을 클릭했을 때 실행할 추가 로직
+        return;
+    }
+}
+
 void ALegendMinerHUD::UpdateInventoryUI()
 {
     if (!PlayerInventoryWidgetInstance) return;

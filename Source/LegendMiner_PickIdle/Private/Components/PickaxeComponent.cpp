@@ -219,3 +219,22 @@ float UPickaxeComponent::GetMiningSpeedBonus() const
 
     return 0.0f;
 }
+
+FPickaxeData UPickaxeComponent::GetPickaxeUpgradeData(FName PickaxeRowName)
+{
+    if (!PickaxeDataTable)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PickaxeComponent: PickaxeDataTable is NULL!"));
+        return FPickaxeData(); // 기본 빈 값 반환
+    }
+
+    const FPickaxeData* PickaxeData = PickaxeDataTable->FindRow<FPickaxeData>(PickaxeRowName, TEXT("Pickaxe Upgrade Lookup"));
+
+    if (!PickaxeData)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PickaxeComponent: No upgrade data found for Pickaxe Level %s"), *PickaxeRowName.ToString());
+        return FPickaxeData(); // 기본 빈 값 반환
+    }
+
+    return *PickaxeData; // 값 복사하여 반환
+}

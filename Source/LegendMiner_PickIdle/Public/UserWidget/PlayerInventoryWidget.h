@@ -53,6 +53,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "UI")
     void UpdateSingleOreQuantity(FName OreID, int32 NewQuantity);
 
+    UFUNCTION()
+    void OnUpgradePickaxeConfirmed(bool bConfirmed);
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
     float OreListBorderWidth = 250.f;
 

@@ -128,6 +128,8 @@ void AOre::StartMining(APlayerCharacter* Player)
 
     PlayerRef = Player;
 
+    CachedSaveData = UPlayerSaveData::LoadGameData();
+
     FName RowName = FName(*FString::FromInt(OreLevel));
     FOreData* OreData = SpawnerRef->OreDataTable->FindRow<FOreData>(RowName, TEXT(""));
     if (!OreData) return;
@@ -148,14 +150,6 @@ void AOre::StartMining(APlayerCharacter* Player)
     // 계산된 채굴 시간을 MiningTime에 할당
     MiningTime = CalculatedMiningTime;
 
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Yellow,
-            FString::Printf(TEXT("채굴 보너스: %.2f 초"), PickaxeBonus));
-        GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Yellow,
-            FString::Printf(TEXT("채굴 속도: %.2f 초"), CalculatedMiningTime));
-    }
-
     GetWorldTimerManager().SetTimer(MiningTimerHandle, this, &AOre::MineOre, MiningTime * 1.166667, true);
 
     UE_LOG(LogTemp, Warning, TEXT("AOre: Started mining with interval: %.2f"), CalculatedMiningTime);
@@ -163,23 +157,41 @@ void AOre::StartMining(APlayerCharacter* Player)
 
 void AOre::MineOre()
 {
-    // UI 업데이트
-    if (PlayerRef)
+    if (!PlayerRef)
     {
-        if (CachedSaveData)
-        {
-            FName MinedOreID = FName(*FString::FromInt(OreLevel));
+        UE_LOG(LogTemp, Warning, TEXT("AOre: PlayerRef is NULL!"));
+        return;
+    }
 
-            CachedSaveData->AddOreToInventory(MinedOreID, 1);
+    if (!CachedSaveData)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("AOre: CachedSaveData is NULL, loading fresh data."));
+        CachedSaveData = UPlayerSaveData::LoadGameData();
+    }
 
-            int32 GetQuantity = CachedSaveData->GetOreQuantity(MinedOreID);
+    if (!CachedSaveData)
+    {
+        UE_LOG(LogTemp, Error, TEXT("AOre: Failed to load CachedSaveData!"));
+        return;
+    }
 
-            PlayerRef->CachedInventoryWidget->UpdateSingleOreQuantity(MinedOreID, GetQuantity);
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("AOre: CachedInventoryWidget is NULL!"));
-        }
+    FName MinedOreID = FName(*FString::FromInt(OreLevel));
+
+    // 최신 데이터에 광석 추가
+    CachedSaveData->AddOreToInventory(MinedOreID, 1);
+    CachedSaveData->SaveGameData(); // 즉시 저장
+
+    // UI 갱신
+    if (PlayerRef->CachedInventoryWidget)
+    {
+        int32 GetQuantity = CachedSaveData->GetOreQuantity(MinedOreID);
+        PlayerRef->CachedInventoryWidget->UpdateSingleOreQuantity(MinedOreID, GetQuantity);
+
+        UE_LOG(LogTemp, Warning, TEXT("AOre: Updated Inventory UI for OreID: %s, New Quantity: %d"), *MinedOreID.ToString(), GetQuantity);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("AOre: CachedInventoryWidget is NULL!"));
     }
 }
 

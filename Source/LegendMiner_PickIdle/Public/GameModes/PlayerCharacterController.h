@@ -18,10 +18,6 @@ class LEGENDMINER_PICKIDLE_API APlayerCharacterController : public APlayerContro
 public:
     APlayerCharacterController();
 
-    // UI 닫기 및 게임 입력 활성화
-    UFUNCTION(BlueprintCallable, Category = "UI")
-    void CloseMainMenu();
-
 protected:
     virtual void BeginPlay() override;
     virtual void SetupInputComponent() override;
@@ -36,6 +32,17 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
     UInputAction* ClickMoveAction;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+    UInputAction* ESCAction;
+
     UFUNCTION()
     void OnClickMove(const FInputActionValue& Value);
+
+    // ESC 버튼을 눌렀을 때 실행되는 함수
+    UFUNCTION()
+    void OnESCPressed();
+
+    // 메시지 위젯에서 확인 버튼을 눌렀을 때 실행되는 함수
+    UFUNCTION()
+    void OnExitConfirmed(bool bConfirmed);
 };

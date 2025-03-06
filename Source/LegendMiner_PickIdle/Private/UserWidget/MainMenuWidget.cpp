@@ -1,6 +1,7 @@
 #include "MainMenuWidget.h"
 #include "PlayerSaveData.h"
 #include "LegendMinerGameInstance.h"
+#include "LegendMinerHUD.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
@@ -82,28 +83,70 @@ void UMainMenuWidget::OnStartGameClicked()
 
     bool bHasSaveData = UGameplayStatics::DoesSaveGameExist(TEXT("PlayerSaveSlot"), 0);
 
-    // 기존 세이브 데이터 삭제
+    // 기존 세이브 데이터가 있을 경우, 메시지를 먼저 띄움
     if (bHasSaveData)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Deleting existing save data..."));
-        UGameplayStatics::DeleteGameInSlot(TEXT("PlayerSaveSlot"), 0);
+        UE_LOG(LogTemp, Warning, TEXT("Existing save data found. Asking for confirmation..."));
+
+        ALegendMinerHUD* LegendMinerHUD = Cast<ALegendMinerHUD>(GetOwningPlayer()->GetHUD());
+        if (LegendMinerHUD)
+        {
+            LegendMinerHUD->ShowMessage(
+                FText::FromString(TEXT("기존 데이터를 삭제하고\n새 게임을 시작하시겠습니까?")),
+                true,
+                this,
+                "OnNewGameConfirmed",
+                FText::FromString(TEXT("네")),
+                FText::FromString(TEXT("아니오"))
+            );
+        }
+        return;  // 메시지를 띄운 후 바로 종료, 사용자의 응답을 기다림
     }
+
+    // 기존 세이브 데이터가 없을 경우, 바로 새 게임 시작
+    StartNewGame();
+}
+
+void UMainMenuWidget::OnNewGameConfirmed(bool bConfirmed)
+{
+    if (!bConfirmed)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("New game canceled by user."));
+        return;  // 사용자가 "아니오"를 선택하면 아무것도 하지 않음
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("User confirmed new game. Deleting save data and starting new game..."));
+
+    // 기존 세이브 데이터 삭제
+    if (UGameplayStatics::DoesSaveGameExist(TEXT("PlayerSaveSlot"), 0))
+    {
+        UGameplayStatics::DeleteGameInSlot(TEXT("PlayerSaveSlot"), 0);
+        UE_LOG(LogTemp, Warning, TEXT("Existing save data deleted."));
+    }
+
+    // 새 게임 시작
+    StartNewGame();
+}
+
+void UMainMenuWidget::StartNewGame()
+{
+    UE_LOG(LogTemp, Warning, TEXT("Creating new save data and starting game..."));
 
     // 새로운 세이브 데이터 생성
     UPlayerSaveData* NewSaveData = NewObject<UPlayerSaveData>();
     if (NewSaveData)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Creating new save data..."));
         NewSaveData->InitializeSaveData();
         NewSaveData->SaveGameData();  // 새 데이터 즉시 저장
+        UE_LOG(LogTemp, Warning, TEXT("New save data created and saved."));
     }
     else
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to create new save data!"));
+        return;
     }
 
     // UI 제거
-    UE_LOG(LogTemp, Warning, TEXT("Calling CloseMainMenu()..."));
     CloseMainMenu();
 
     // 선택된 레벨로 이동

@@ -157,36 +157,55 @@ const TArray<FOreInventoryItem>& UPlayerSaveData::GetAllOreData() const
 // 광석 판매 (골드 추가 후 광석 차감)
 void UPlayerSaveData::SellOre(FName OreID, int32 SellPrice)
 {
+    bool bOreSold = false;
+    int32 OreIndexToRemove = -1; // 삭제할 인덱스 추적
+
     for (int32 i = 0; i < OreInventory.Num(); i++)
     {
         if (OreInventory[i].OreID == OreID)
         {
             int32 Amount = OreInventory[i].Quantity; // 모든 개수 판매
-            OreInventory[i].Quantity = 0; // 개수 0으로 설정
+            OreInventory[i].Quantity = 0;
             PlayerGold += SellPrice * Amount; // 골드 증가
 
             UE_LOG(LogTemp, Warning, TEXT("Sold all %d of %s. New Gold: %d"), Amount, *OreID.ToString(), PlayerGold);
 
-            OreInventory.RemoveAt(i); // 광석 인벤토리에서 제거
+            bOreSold = true;
 
-            SaveGameData(); // 데이터 저장
-
-            // 판매 후 모든 AOre 인스턴스의 `CachedSaveData` 갱신
-            TArray<AActor*> Ores;
-            UGameplayStatics::GetAllActorsOfClass(GWorld, AOre::StaticClass(), Ores);
-            for (AActor* OreActor : Ores)
-            {
-                AOre* Ore = Cast<AOre>(OreActor);
-                if (Ore)
-                {
-                    Ore->RefreshSaveData();
-                }
-            }
-
-            OnOreDataUpdated.Broadcast(); // UI 갱신 이벤트 발생
-            return;
+            // 나중에 삭제할 인덱스 저장 (반복문 중 직접 삭제 X)
+            OreIndexToRemove = i;
+            break;
         }
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("Ore not found in inventory!"));
+    // 반복문 종료 후 요소 제거 (배열 크기 변동 방지)
+    if (OreIndexToRemove != -1)
+    {
+        OreInventory.RemoveAt(OreIndexToRemove);
+    }
+
+    if (bOreSold)
+    {
+        SaveGameData(); // 한 번만 저장
+
+        // 판매 후 모든 AOre 인스턴스의 `CachedSaveData` 갱신
+        TArray<AActor*> Ores;
+        UGameplayStatics::GetAllActorsOfClass(GWorld, AOre::StaticClass(), Ores);
+        for (AActor* OreActor : Ores)
+        {
+            AOre* Ore = Cast<AOre>(OreActor);
+            if (Ore)
+            {
+                Ore->RefreshSaveData();
+            }
+        }
+
+        OnOreDataUpdated.Broadcast(); // UI 갱신 이벤트 발생
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Ore not found in inventory!"));
+    }
 }
+
+

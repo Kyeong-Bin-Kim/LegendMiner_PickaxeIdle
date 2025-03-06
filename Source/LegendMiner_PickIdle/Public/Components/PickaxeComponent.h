@@ -41,7 +41,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Pickaxe")
     void UpgradePickaxe();
 
+    UFUNCTION(BlueprintCallable, Category = "Pickaxe")
     float GetMiningSpeedBonus() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Pickaxe")
+    FPickaxeData GetPickaxeUpgradeData(FName PickaxeRowName);
 
     // 곡괭이 레벨 (저장된 데이터에서 가져옴)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pickaxe")

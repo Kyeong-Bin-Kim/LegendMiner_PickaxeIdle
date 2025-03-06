@@ -2,6 +2,7 @@
 #include "PlayerSaveData.h"
 #include "PlayerCharacter.h"
 #include "PickaxeComponent.h"
+#include "LegendMinerHUD.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/ScaleBoxSlot.h"
@@ -184,8 +185,6 @@ void UPlayerInventoryWidget::UpdatePickaxeUpgradeUI()
     UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: Pickaxe Upgrade UI updated for Level %d"), CurrentPickaxeLevel);
 }
 
-
-
 void UPlayerInventoryWidget::UpdateGold(int32 NewGoldAmount)
 {
     if (!GoldText) return;
@@ -195,7 +194,7 @@ void UPlayerInventoryWidget::UpdateGold(int32 NewGoldAmount)
 
 void UPlayerInventoryWidget::OnSellOreClicked()
 {
-    UPlayerSaveData* PlayerSaveData = Cast<UPlayerSaveData>(UGameplayStatics::LoadGameFromSlot(TEXT("PlayerSaveSlot"), 0));
+    UPlayerSaveData* PlayerSaveData = UPlayerSaveData::LoadGameData();
     if (!PlayerSaveData)
     {
         UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: No save data found, cannot sell ores."));
@@ -203,10 +202,9 @@ void UPlayerInventoryWidget::OnSellOreClicked()
     }
 
     int32 PickaxeLevel = PlayerSaveData->GetPickaxeLevel(); // 현재 플레이어 곡괭이 레벨 가져오기
-    bool bHasSellableOres = false;
 
-    // 원본 리스트를 복사해서 안전하게 반복문 실행
-    TArray<FOreInventoryItem> OreToSell;
+    // 판매할 광석 목록을 미리 저장
+    TArray<FName> OreIDsToSell;
     for (const FOreInventoryItem& OreItem : PlayerSaveData->OreInventory)
     {
         int32 OreLevel = FCString::Atoi(*OreItem.OreID.ToString());
@@ -214,61 +212,98 @@ void UPlayerInventoryWidget::OnSellOreClicked()
         // 판매 조건: 곡괭이 레벨보다 낮은 광석만 판매
         if (OreLevel <= PickaxeLevel - 1 || (PickaxeLevel == 1 && OreLevel == 1))
         {
-            OreToSell.Add(OreItem);
+            OreIDsToSell.Add(OreItem.OreID);
         }
     }
 
-    // 반복문 종료 후 실제 판매 실행
-    for (const FOreInventoryItem& OreItem : OreToSell)
+    // 판매할 광석이 없으면 메시지 표시 후 종료
+    if (OreIDsToSell.Num() == 0)
     {
-        FOreData* OreData = OreDataTable->FindRow<FOreData>(OreItem.OreID, TEXT("Ore Lookup"));
+        ALegendMinerHUD* LegendMinerHUD = Cast<ALegendMinerHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
+        if (LegendMinerHUD)
+        {
+            LegendMinerHUD->ShowMessage(
+                FText::FromString(TEXT("판매할 수 있는 광물이 없습니다.")),
+                false,
+                this,
+                "OnNoOreToSellConfirmed",
+                FText::FromString(TEXT("확인"))
+            );
+        }
+        return;
+    }
+
+    // 배열을 직접 수정하지 않도록 사전 처리된 목록 사용
+    for (const FName& OreID : OreIDsToSell)
+    {
+        FOreData* OreData = OreDataTable->FindRow<FOreData>(OreID, TEXT("Ore Lookup"));
         if (!OreData) continue;
 
-        bHasSellableOres = true;
         int32 SellPrice = OreData->Rarity; // 개당 가격
-        PlayerSaveData->SellOre(OreItem.OreID, SellPrice);
+        PlayerSaveData->SellOre(OreID, SellPrice);
     }
 
-    // 변경 사항 반영을 위해 세이브 데이터를 다시 로드
-    if (bHasSellableOres)
-    {
-        PlayerSaveData = UPlayerSaveData::LoadGameData();
-        UpdateInventoryList(); // UI 업데이트
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: No ores available for sale."));
-    }
+    // 판매 후 최신 데이터 다시 로드
+    PlayerSaveData = UPlayerSaveData::LoadGameData();
+
+    // UI 업데이트
+    UpdateInventoryList();
 }
+
 
 void UPlayerInventoryWidget::OnAllSellOreClicked()
 {
-    UPlayerSaveData* PlayerSaveData = Cast<UPlayerSaveData>(UGameplayStatics::LoadGameFromSlot(TEXT("PlayerSaveSlot"), 0));
-    if (!PlayerSaveData)
+    UPlayerSaveData* PlayerSaveData = UPlayerSaveData::LoadGameData();
+    if (!PlayerSaveData || PlayerSaveData->OreInventory.Num() == 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: No save data found, cannot sell ores."));
+        ALegendMinerHUD* LegendMinerHUD = Cast<ALegendMinerHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
+        if (LegendMinerHUD)
+        {
+            LegendMinerHUD->ShowMessage(
+                FText::FromString(TEXT("판매할 수 있는 광물이 없습니다.")),
+                false,
+                this,
+                "OnNoOreToSellConfirmed",
+                FText::FromString(TEXT("확인"))
+            );
+        }
         return;
     }
 
     bool bHasSellableOres = false;
 
+    // 안전한 반복을 위해 배열 복사
+    TArray<FName> OreIDsToSell;
     for (const FOreInventoryItem& OreItem : PlayerSaveData->OreInventory)
     {
-        FOreData* OreData = OreDataTable->FindRow<FOreData>(OreItem.OreID, TEXT("Ore Lookup"));
-        if (!OreData) continue;
-
-        bHasSellableOres = true;
-        int32 SellPrice = OreData->Rarity; // 개당 판매 가격
-        PlayerSaveData->SellOre(OreItem.OreID, SellPrice); // 모든 개수 판매
+        if (OreItem.Quantity > 0)
+        {
+            OreIDsToSell.Add(OreItem.OreID);
+        }
     }
 
-    if (!bHasSellableOres)
+    // 판매할 광석이 없으면 종료
+    if (OreIDsToSell.Num() == 0)
     {
         UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: No ores available for sale."));
         return;
     }
 
-    UpdateInventoryList(); // 판매 후 UI 업데이트
+    // 배열을 안전하게 순회하면서 제거
+    for (const FName& OreID : OreIDsToSell)
+    {
+        FOreData* OreData = OreDataTable->FindRow<FOreData>(OreID, TEXT("Ore Lookup"));
+        if (!OreData) continue;
+
+        int32 SellPrice = OreData->Rarity; // 개당 가격
+        PlayerSaveData->SellOre(OreID, SellPrice);
+    }
+
+    // 최신 데이터 다시 로드
+    PlayerSaveData = UPlayerSaveData::LoadGameData();
+
+    // UI 업데이트
+    UpdateInventoryList();
 }
 
 void UPlayerInventoryWidget::OnUpgradePickaxeClicked()
@@ -294,14 +329,105 @@ void UPlayerInventoryWidget::OnUpgradePickaxeClicked()
         return;
     }
 
+    // 현재 곡괭이 레벨 및 다음 업그레이드 정보 가져오기
+    int32 CurrentPickaxeLevel = PlayerSaveData->GetPickaxeLevel();
+    FName NextPickaxeRowName = FName(*FString::FromInt(CurrentPickaxeLevel + 1));
+
+    FPickaxeData NextPickaxeData = PickaxeComponent->GetPickaxeUpgradeData(NextPickaxeRowName);
+
+    if (NextPickaxeData.UpgradeCostOre == 0 && NextPickaxeData.UpgradeCostGold == 0)
+    {
+        ALegendMinerHUD* HUD = Cast<ALegendMinerHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
+        if (HUD)
+        {
+            HUD->ShowMessage(
+                FText::FromString(TEXT("더 이상 업그레이드할 수 없습니다.")),
+                false,
+                this,
+                "OnUpgradeUnavailableConfirmed",
+                FText::FromString(TEXT("확인"))
+            );
+        }
+        return;
+    }
+
+    // 업그레이드에 필요한 자원 확인
+    int32 RequiredOre = NextPickaxeData.UpgradeCostOre;
+    int32 RequiredGold = NextPickaxeData.UpgradeCostGold;
+    FName RequiredOreID = FName(*FString::FromInt(CurrentPickaxeLevel)); // 현재 곡괭이 레벨과 동일한 광석 필요
+
+    int32 PlayerOreQuantity = PlayerSaveData->GetOreQuantity(RequiredOreID);
+    int32 PlayerGold = PlayerSaveData->GetPlayerGold();
+
+    if (PlayerOreQuantity < RequiredOre || PlayerGold < RequiredGold)
+    {
+        ALegendMinerHUD* HUD = Cast<ALegendMinerHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
+        if (HUD)
+        {
+            HUD->ShowMessage(
+                FText::FromString(TEXT("광석 또는 골드가 부족합니다.")),
+                false,
+                this,
+                "",
+                FText::FromString(TEXT("확인"))
+            );
+        }
+        return;
+    }
+
+    // 사용자에게 업그레이드 확인 메시지 표시
+    ALegendMinerHUD* HUD = Cast<ALegendMinerHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
+    if (HUD)
+    {
+        HUD->ShowMessage(
+            FText::FromString(TEXT("곡괭이를 업그레이드하시겠습니까?")),
+            true,
+            this,
+            "OnUpgradePickaxeConfirmed",
+            FText::FromString(TEXT("네")),
+            FText::FromString(TEXT("아니오"))
+        );
+    }
+}
+
+void UPlayerInventoryWidget::OnUpgradePickaxeConfirmed(bool bConfirmed)
+{
+    if (!bConfirmed)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: Pickaxe upgrade canceled."));
+        return;
+    }
+
+    APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+    if (!PlayerCharacter || !PlayerCharacter->GetPickaxeComponent())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: No player character or pickaxe component found."));
+        return;
+    }
+
+    UPickaxeComponent* PickaxeComponent = PlayerCharacter->GetPickaxeComponent();
+    if (!PickaxeComponent)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: PickaxeComponent is NULL!"));
+        return;
+    }
+
     // 곡괭이 업그레이드 실행
     PickaxeComponent->UpgradePickaxe();
 
     // UI 업데이트 (업그레이드 후 광석 및 골드 반영)
-    UpdateInventoryList();
-    UpdateGold(PlayerSaveData->GetPlayerGold());
-    UpdatePickaxeUpgradeUI();
+    UPlayerSaveData* PlayerSaveData = UPlayerSaveData::LoadGameData();
+    if (PlayerSaveData)
+    {
+        UpdateInventoryList();
+        UpdateGold(PlayerSaveData->GetPlayerGold());
+        UpdatePickaxeUpgradeUI();
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: Pickaxe upgraded successfully."));
 }
+
+
 
 void UPlayerInventoryWidget::UpdateSingleOreQuantity(FName OreID, int32 NewQuantity)
 {

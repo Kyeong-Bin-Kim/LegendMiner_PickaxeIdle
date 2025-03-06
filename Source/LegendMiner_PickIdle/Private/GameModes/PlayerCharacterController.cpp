@@ -2,6 +2,10 @@
 #include "PlayerCharacter.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "LegendMinerHUD.h"
+#include "LegendMinerGameInstance.h"
+#include "PlayerSaveData.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Engine/World.h"
 
 APlayerCharacterController::APlayerCharacterController()
@@ -40,6 +44,11 @@ void APlayerCharacterController::SetupInputComponent()
         {
             EnhancedInput->BindAction(ClickMoveAction, ETriggerEvent::Triggered, this, &APlayerCharacterController::OnClickMove);
         }
+
+        if (ClickMoveAction)
+        {
+            EnhancedInput->BindAction(ESCAction, ETriggerEvent::Started, this, &APlayerCharacterController::OnESCPressed);
+        }
     }
 }
 
@@ -54,15 +63,43 @@ void APlayerCharacterController::OnClickMove(const FInputActionValue& Value)
     }
 }
 
-void APlayerCharacterController::CloseMainMenu()
+void APlayerCharacterController::OnESCPressed()
 {
-    // 게임 입력 모드로 변경
-    FInputModeGameOnly GameMode;
-    SetInputMode(GameMode);
+    ULegendMinerGameInstance* GameInstance = Cast<ULegendMinerGameInstance>(GetGameInstance());
+    if (GameInstance)
+    {
+        // 메뉴가 한 번 생성되고 닫혔을 때만 ESC 키가 동작
+        if (!GameInstance->bIsMainMenuInitialized || !GameInstance->bMainMenuCloseInitialized)
+        {
+            return;
+        }
+    }
 
-    bShowMouseCursor = false;
+    ALegendMinerHUD* LegendMinerHUD = Cast<ALegendMinerHUD>(GetHUD());
+    if (LegendMinerHUD)
+    {
+        LegendMinerHUD->ShowMessage(
+            FText::FromString(TEXT("정말 종료하시겠습니까?")),
+            true,
+            this,
+            "OnExitConfirmed",
+            FText::FromString(TEXT("확인")),
+            FText::FromString(TEXT("취소"))
+        );
+    }
+}
 
-    // 플레이어 입력 활성화
-    SetIgnoreLookInput(false);
-    SetIgnoreMoveInput(false);
+void APlayerCharacterController::OnExitConfirmed(bool bConfirmed)
+{
+    // 종료 전에 데이터 저장
+    UPlayerSaveData* PlayerSaveData = UPlayerSaveData::LoadGameData();
+    if (PlayerSaveData)
+    {
+        PlayerSaveData->SaveGameData(); // 저장 실행
+        UE_LOG(LogTemp, Warning, TEXT("Game data saved before exit."));
+    }
+
+    // 게임 종료 실행
+    UKismetSystemLibrary::QuitGame(GWorld, nullptr, EQuitPreference::Quit, false);
+}
 }

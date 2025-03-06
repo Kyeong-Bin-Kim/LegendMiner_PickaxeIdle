@@ -26,6 +26,12 @@ public:
     UFUNCTION()
     void OnQuitGameClicked();
 
+    UFUNCTION()
+    void UpdateUIBasedOnSaveData();
+
+	UFUNCTION()
+	void OnNewGameConfirmed(bool bConfirmed);
+
 protected:
     virtual void NativeConstruct() override;
 
@@ -50,8 +56,10 @@ protected:
     UPROPERTY(meta = (BindWidget))
     class UVerticalBox* ButtonContainer;
 
-    void UpdateUIBasedOnSaveData();
-
 private:
+    UFUNCTION()
     void CloseMainMenu();
+
+    UFUNCTION()
+    void StartNewGame();
 };
