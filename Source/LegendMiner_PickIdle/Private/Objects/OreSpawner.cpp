@@ -48,12 +48,10 @@ void AOreSpawner::UpdateNavMesh()
     {
         NavSystem->Build();
         UE_LOG(LogTemp, Warning, TEXT("AOreSpawner: NavMesh has been rebuilt."));
-		GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green, TEXT("NavMesh has been rebuilt."));
     }
     else
     {
         UE_LOG(LogTemp, Error, TEXT("AOreSpawner: Failed to get NavigationSystem!"));
-		GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, TEXT("Failed to get NavigationSystem!"));
     }
 }
 
@@ -245,42 +243,6 @@ int32 AOreSpawner::GetMaxOreLevel(int32 PlayerPickaxeLevel)
     }
 
     return MaxOreLevel;
-}
-
-
-void AOreSpawner::ReplaceOre(AOre* DestroyedOre)
-{
-    if (!DestroyedOre || !OreDataTable || SpawnBoxes.Num() == 0)
-    {
-        return;
-    }
-
-    // 파괴된 광석을 리스트에서 제거
-    ActiveOres.Remove(DestroyedOre);
-    DestroyedOre->Destroy();
-
-    int32 PlayerPickaxeLevel = GetPlayerPickaxeLevel();
-
-    // 일정 시간(30초) 후 새로운 광석 스폰
-    FTimerHandle RespawnTimer;
-    GetWorld()->GetTimerManager().SetTimer(RespawnTimer, [this, PlayerPickaxeLevel]()
-        {
-            if (ActiveOres.Num() < MaxOreCount)
-            {
-                FVector NewLocation = GetRandomSpawnLocation();
-                int32 NewOreLevel = GetRandomOreLevel(PlayerPickaxeLevel);
-
-                AOre* NewOre = GetWorld()->SpawnActor<AOre>(AOre::StaticClass(), NewLocation, FRotator::ZeroRotator);
-                if (NewOre)
-                {
-                    NewOre->InitializeOre(NewOreLevel, this);
-                    ActiveOres.Add(NewOre);
-                    UE_LOG(LogTemp, Warning, TEXT("New Ore Spawned! Current Ore Count: %d"), ActiveOres.Num());
-                
-					UpdateNavMesh();
-                }
-            }
-        }, 30.0f, false);
 }
 
 void AOreSpawner::RespawnAllOres()

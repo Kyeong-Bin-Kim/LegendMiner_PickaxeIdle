@@ -31,17 +31,17 @@ APlayerCharacter::APlayerCharacter()
     }
 
     // 스프링암
-    SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-    SpringArm->SetupAttachment(RootComponent);
-    SpringArm->TargetArmLength = CameraDistance;
-    SpringArm->bUsePawnControlRotation = false;
-    SpringArm->bInheritPitch = false;
-    SpringArm->bInheritYaw = false;
-    SpringArm->bInheritRoll = false;
+    PlayerSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+    PlayerSpringArm->SetupAttachment(RootComponent);
+    PlayerSpringArm->TargetArmLength = CameraDistance;
+    PlayerSpringArm->bUsePawnControlRotation = false;
+    PlayerSpringArm->bInheritPitch = false;
+    PlayerSpringArm->bInheritYaw = false;
+    PlayerSpringArm->bInheritRoll = false;
 
     // 카메라
     Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-    Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+    Camera->SetupAttachment(PlayerSpringArm, USpringArmComponent::SocketName);
     Camera->bUsePawnControlRotation = false;
     Camera->SetRelativeLocation(CameraLotation);
     Camera->SetRelativeRotation(CameraRotation);
@@ -104,8 +104,8 @@ void APlayerCharacter::Tick(float DeltaTime)
                 TargetRotation.Pitch = 0.f;
                 TargetRotation.Roll = 0.f;
                 FRotator CurrentRotation = GetActorRotation();
-                CurrentRotation.Normalize();
 
+				// 보간 회전
                 float RotationSpeed = 5.f;
                 FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, RotationSpeed);
                 SetActorRotation(NewRotation);
@@ -113,11 +113,15 @@ void APlayerCharacter::Tick(float DeltaTime)
             AddMovementInput(Direction, CurrentSpeed / MaxSpeed);
         }
     }
-    // 광석을 바라보고 있는 경우, 회전 로직
-    else if (bLookingAtOre)
+    else
     {
-        RotateTowardsOre(DeltaTime);
+        // 광석을 바라보고 있는 경우, 회전 로직
+        if (bLookingAtOre)
+        {
+            RotateTowardsOre(DeltaTime);
+        }
     }
+
 
     // 이동 속도 업데이트 (애니메이션 블루프린트에서 사용 가능)
     Speed = GetVelocity().Size();
@@ -196,10 +200,17 @@ void APlayerCharacter::RotateTowardsOre(float DeltaTime)
     TargetRotation.Pitch = 0.f;
     TargetRotation.Roll = 0.f;
 
+	//bMining = true; -- 회전 용
+
+    //GetCharacterMovement()->Velocity = GetActorForwardVector() * 200.0f; -- 회전 용
+
     FRotator CurrentRotation = GetActorRotation();
-    float RotationSpeed = 2.f;
+
+    float RotationSpeed = 5.f;
     FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, RotationSpeed);
     SetActorRotation(NewRotation);
+
+    //bMining = false; -- 회전 용
 
     float AngleDiff = FMath::Abs(FMath::FindDeltaAngleDegrees(CurrentRotation.Yaw, TargetRotation.Yaw));
     if (AngleDiff < 3.0f)
@@ -228,6 +239,13 @@ void APlayerCharacter::StopMining()
         TargetOre->StopMining();
         TargetOre = nullptr; // 필요하다면, 더 이상 타겟이 없음을 표시
     }
+}
+
+void APlayerCharacter::StopMiningAndRestart()
+{
+	bLookingAtOre = false;
+	StopMining();
+    GetWorld()->GetTimerManager().SetTimer(FindOreTimerHandle, this, &APlayerCharacter::FindClosestOre, 0.5f, false);
 }
 
 UPickaxeComponent* APlayerCharacter::GetPickaxeComponent() const

@@ -29,8 +29,9 @@ void UPickaxeComponent::BeginPlay()
     // 곡괭이 데이터 업데이트
     UpdatePickaxeData();
 
-    // 곡괭이 외형 설정
+    // 곡괭이 외형 및 이펙트 설정
     SetPickaxeMesh();
+    SetPickaxeEffect();
 
     // 캐릭터 손에 부착
     AttachPickaxeToHand();
@@ -123,6 +124,21 @@ void UPickaxeComponent::SetPickaxeMesh()
     }
 }
 
+// 곡괭이 이펙트 설정
+void UPickaxeComponent::SetPickaxeEffect()
+{
+    if (!EffectComponent)
+    {
+        UE_LOG(LogTemp, Error, TEXT("SetPickaxeEffect failed: EffectComponent is NULL!"));
+        return;
+    }
+
+    if (CurrentPickaxeData.Effect)
+    {
+        EffectComponent->SetAsset(CurrentPickaxeData.Effect);
+    }
+}
+
 // 곡괭이를 캐릭터 손에 부착
 void UPickaxeComponent::AttachPickaxeToHand()
 {
@@ -132,7 +148,21 @@ void UPickaxeComponent::AttachPickaxeToHand()
         USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
         if (MeshComp)
         {
-            StaticMeshComponent->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("hand_rSocket"));
+            StaticMeshComponent->AttachToComponent(
+                MeshComp,
+                FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+                TEXT("hand_rSocket")
+            );
+
+            // EffectComponent를 "Aura" 소켓에 부착
+            if (CurrentPickaxeData.Effect)
+            {
+                EffectComponent->AttachToComponent(
+                    StaticMeshComponent,
+                    FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+                    TEXT("Aura")  // 곡괭이 메쉬의 소켓 이름
+                );
+            }
         }
     }
 }
@@ -149,11 +179,6 @@ void UPickaxeComponent::UpgradePickaxe()
     FPickaxeData* NextPickaxeData = PickaxeDataTable->FindRow<FPickaxeData>(NextPickaxeRowName, TEXT("Pickaxe Upgrade Lookup"));
     if (!NextPickaxeData)
     {
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red,
-                FString::Printf(TEXT("No upgrade data found for Pickaxe Level %d"), CurrentPickaxeLevel + 1));
-        }
         return;
     }
 
@@ -165,27 +190,6 @@ void UPickaxeComponent::UpgradePickaxe()
 
     int32 PlayerOreQuantity = PlayerSaveData->GetOreQuantity(RequiredOreID);
     int32 PlayerGold = PlayerSaveData->GetPlayerGold();
-
-    // 업그레이드 조건 확인 (광석 & 골드 충분한지 체크)
-    if (PlayerOreQuantity < RequiredOre)
-    {
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red,
-                FString::Printf(TEXT("Not enough ore! Required: %d, Owned: %d"), RequiredOre, PlayerOreQuantity));
-        }
-        return;
-    }
-
-    if (PlayerGold < RequiredGold)
-    {
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red,
-                FString::Printf(TEXT("Not enough gold! Required: %d, Owned: %d"), RequiredGold, PlayerGold));
-        }
-        return;
-    }
 
     // 비용 차감
     PlayerSaveData->RemoveOreFromInventory(RequiredOreID, RequiredOre);
@@ -205,8 +209,9 @@ void UPickaxeComponent::UpgradePickaxe()
     // 업그레이드 후 채굴 속도 다시 적용
     UpdatePickaxeData();
 
-    // 곡괭이 외형 변경
+    // 곡괭이 외형 및 이펙트 변경
     SetPickaxeMesh();
+    SetPickaxeEffect();
 }
 
 

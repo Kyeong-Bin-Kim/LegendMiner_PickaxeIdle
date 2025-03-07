@@ -54,10 +54,6 @@ public:
     UPROPERTY(EditAnywhere, Category = "Ore")
     UDataTable* OreDataTable;
 
-    // 특정 광석이 파괴되었을 때 새로운 광석을 생성
-    UFUNCTION()
-    void ReplaceOre(AOre* DestroyedOre);
-
 	// 모든 광석 재생성
     UFUNCTION()
     void RespawnAllOres();

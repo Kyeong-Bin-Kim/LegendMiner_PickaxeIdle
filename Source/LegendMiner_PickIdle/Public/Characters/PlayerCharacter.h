@@ -36,12 +36,15 @@ public:
     void StopMining();
 
     UFUNCTION(BlueprintCallable, Category = "Pickaxe")
+    void StopMiningAndRestart();
+
+    UFUNCTION(BlueprintCallable, Category = "Pickaxe")
     UPickaxeComponent* GetPickaxeComponent() const;
 
 protected:
     // 카메라 관련
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-    class USpringArmComponent* SpringArm;
+    class USpringArmComponent* PlayerSpringArm;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
     class UCameraComponent* Camera;
@@ -50,7 +53,7 @@ protected:
     UPickaxeComponent* PickaxeComponent;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-    float AcceptableDistance = 100.f;
+    float AcceptableDistance = 120.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
     float CameraDistance = 450.f;
@@ -73,15 +76,16 @@ public:
     float Speed;
 
 private:
-
     AOre* TargetOre;
     FVector TargetLocation;
     bool bMovingToTarget;
     float CurrentSpeed;
     bool bLookingAtOre;
 
-    float CurrentMiningSpeed; // 필요에 따라 사용
+    float CurrentMiningSpeed;
     void FindClosestOre();
     void RotateTowardsOre(float DeltaTime);
     void StartMining();       // 오브젝트와 실제 채굴 로직 시작
+
+    FTimerHandle FindOreTimerHandle; // 일정 시간 후 다시 채굴을 시도할 타이머 핸들
 };

@@ -6,7 +6,6 @@
 #include "PlayerInventoryWidget.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
-#include "Engine/Engine.h"
 #include "TimerManager.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -93,7 +92,7 @@ void AOre::UpdateOreAppearance()
     {
         OreMesh->SetStaticMesh(Data->Mesh);
         FVector MeshBounds = OreMesh->Bounds.BoxExtent;
-        float SphereRadius = FMath::Max(MeshBounds.X, MeshBounds.Y) + 100.0f;
+        float SphereRadius = FMath::Max(MeshBounds.X, MeshBounds.Y) + 150.0f;
         OreTrigger->SetSphereRadius(SphereRadius);
     }
 

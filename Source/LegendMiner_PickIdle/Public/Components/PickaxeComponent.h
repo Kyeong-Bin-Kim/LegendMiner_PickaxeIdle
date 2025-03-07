@@ -33,6 +33,10 @@ public:
     UFUNCTION()
     void SetPickaxeMesh();
 
+    // 곡괭이 이펙트 설정
+    UFUNCTION()
+    void SetPickaxeEffect();
+
     // 곡괭이를 캐릭터 손에 부착
     UFUNCTION()
     void AttachPickaxeToHand();

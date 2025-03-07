@@ -202,6 +202,7 @@ void UPlayerInventoryWidget::OnSellOreClicked()
     }
 
     int32 PickaxeLevel = PlayerSaveData->GetPickaxeLevel(); // 현재 플레이어 곡괭이 레벨 가져오기
+    bool bOreSold = false;
 
     // 판매할 광석 목록을 미리 저장
     TArray<FName> OreIDsToSell;
@@ -241,6 +242,16 @@ void UPlayerInventoryWidget::OnSellOreClicked()
 
         int32 SellPrice = OreData->Rarity; // 개당 가격
         PlayerSaveData->SellOre(OreID, SellPrice);
+        bOreSold = true;
+    }
+
+    if (bOreSold) // 판매 성공 시 0.5초 후 채굴 재개
+    {
+        APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+        if (PlayerCharacter)
+        {
+            PlayerCharacter->StopMiningAndRestart();
+        }
     }
 
     // 판매 후 최신 데이터 다시 로드
@@ -254,6 +265,9 @@ void UPlayerInventoryWidget::OnSellOreClicked()
 void UPlayerInventoryWidget::OnAllSellOreClicked()
 {
     UPlayerSaveData* PlayerSaveData = UPlayerSaveData::LoadGameData();
+
+    bool bOreSold = false;
+
     if (!PlayerSaveData || PlayerSaveData->OreInventory.Num() == 0)
     {
         ALegendMinerHUD* LegendMinerHUD = Cast<ALegendMinerHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
@@ -297,6 +311,16 @@ void UPlayerInventoryWidget::OnAllSellOreClicked()
 
         int32 SellPrice = OreData->Rarity; // 개당 가격
         PlayerSaveData->SellOre(OreID, SellPrice);
+		bOreSold = true;
+    }
+
+    if (bOreSold) // 판매 성공 시 0.5초 후 채굴 재개
+    {
+        APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+        if (PlayerCharacter)
+        {
+            PlayerCharacter->StopMiningAndRestart();
+        }
     }
 
     // 최신 데이터 다시 로드
@@ -422,6 +446,12 @@ void UPlayerInventoryWidget::OnUpgradePickaxeConfirmed(bool bConfirmed)
         UpdateInventoryList();
         UpdateGold(PlayerSaveData->GetPlayerGold());
         UpdatePickaxeUpgradeUI();
+    }
+
+
+    if (PlayerCharacter)
+    {
+        PlayerCharacter->StopMiningAndRestart();
     }
 
     UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: Pickaxe upgraded successfully."));

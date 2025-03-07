@@ -5,7 +5,6 @@
 #include "PlayerSaveData.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
-#include "Engine/Engine.h"
 
 void ALegendMinerHUD::BeginPlay()
 {
@@ -92,11 +91,8 @@ void ALegendMinerHUD::ShowMessage(const FText& Message, bool bShowCancelButton, 
 
 void ALegendMinerHUD::OnMessageConfirmedHandler(bool bConfirmed)
 {
-    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "OnMessageConfirmedHandler");
-
     if (MessageWidgetInstance)
     {
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "MessageWidgetInstance");
         MessageWidgetInstance = nullptr; // 안전하게 NULL로 설정하여 재사용 가능하도록 함.
     }
 
