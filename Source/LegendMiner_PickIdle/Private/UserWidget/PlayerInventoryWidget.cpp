@@ -404,7 +404,7 @@ void UPlayerInventoryWidget::OnUpgradePickaxeClicked()
     if (HUD)
     {
         HUD->ShowMessage(
-            FText::FromString(TEXT("곡괭이를 업그레이드하시겠습니까?")),
+            FText::FromString(TEXT("곡괭이를 업그레이드\n하시겠습니까?")),
             true,
             this,
             "OnUpgradePickaxeConfirmed",
