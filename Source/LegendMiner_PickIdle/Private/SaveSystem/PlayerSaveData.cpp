@@ -41,12 +41,10 @@ UPlayerSaveData* UPlayerSaveData::LoadGameData()
         UPlayerSaveData* LoadedData = Cast<UPlayerSaveData>(UGameplayStatics::LoadGameFromSlot(TEXT("PlayerSaveSlot"), 0));
         if (LoadedData)
         {
-            UE_LOG(LogTemp, Log, TEXT("PlayerSaveData: Load successful!"));
             return LoadedData;
         }
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("PlayerSaveData: No save found, creating new save."));
     return NewObject<UPlayerSaveData>();
 }
 
@@ -117,7 +115,6 @@ void UPlayerSaveData::RemoveOreFromInventory(FName OreID, int32 Amount)
             }
         }
     }
-    UE_LOG(LogTemp, Warning, TEXT("PlayerSaveData: Not enough ore to remove!"));
 }
 
 void UPlayerSaveData::SubtractGold(int32 Amount)
@@ -167,8 +164,6 @@ void UPlayerSaveData::SellOre(FName OreID, int32 SellPrice)
             int32 Amount = OreInventory[i].Quantity; // 모든 개수 판매
             OreInventory[i].Quantity = 0;
             PlayerGold += SellPrice * Amount; // 골드 증가
-
-            UE_LOG(LogTemp, Warning, TEXT("Sold all %d of %s. New Gold: %d"), Amount, *OreID.ToString(), PlayerGold);
 
             bOreSold = true;
 

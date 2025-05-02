@@ -45,7 +45,6 @@ void UPickaxeComponent::LoadPickaxeLevelFromSave()
     if (!PlayerSaveData)
     {
         PlayerSaveData = Cast<UPlayerSaveData>(UGameplayStatics::CreateSaveGameObject(UPlayerSaveData::StaticClass()));
-        UE_LOG(LogTemp, Warning, TEXT("No existing save found. Created new PlayerSaveData."));
     }
 
     if (PlayerSaveData)

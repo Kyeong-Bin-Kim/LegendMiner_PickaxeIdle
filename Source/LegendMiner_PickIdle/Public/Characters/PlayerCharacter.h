@@ -34,6 +34,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Pickaxe")
     float GetMiningSpeedBonus() const;
 
+    // 현재 타겟 광석
+    UFUNCTION(BlueprintCallable, Category = "Mining")
+    AOre* GetTargetOre() const { return TargetOre; }
+
     // 현재 타겟 광석의 채굴 시간
     UFUNCTION(BlueprintCallable, Category = "Pickaxe")
     float GetMiningSpeed() const;
@@ -123,7 +127,7 @@ private:
 
     // 가장 가까운 광석 탐색
     void FindClosestOre();
-
+        
     // 주어진 위치 기준 가장 가까운 광석 탐색
     AOre* FindClosestOreFromPoint(const FVector& SearchOrigin);
 

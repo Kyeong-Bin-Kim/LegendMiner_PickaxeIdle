@@ -35,10 +35,6 @@ public:
     UFUNCTION()
     void MineOre();
 
-    // 채굴 중단
-    UFUNCTION()
-    void StopMining();
-
     UFUNCTION()
     void RefreshSaveData();
 
@@ -60,8 +56,6 @@ private:
 
     int32 OreLevel;
     float MiningTime;
-
-    FTimerHandle MiningTimerHandle;
 
     void UpdateOreAppearance();
     int32 GetMaxOreLevel() const;

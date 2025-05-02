@@ -47,7 +47,6 @@ void AOreSpawner::UpdateNavMesh()
     if (NavSystem)
     {
         NavSystem->Build();
-        UE_LOG(LogTemp, Warning, TEXT("AOreSpawner: NavMesh has been rebuilt."));
     }
     else
     {
@@ -67,7 +66,6 @@ void AOreSpawner::FindSpawnBoxes()
         if (Box)
         {
             SpawnBoxes.Add(Box);
-            UE_LOG(LogTemp, Warning, TEXT("AOreSpawner: Found SpawnBox - %s"), *Box->GetName());
         }
     }
 
@@ -90,18 +88,40 @@ int32 AOreSpawner::GetPlayerPickaxeLevel()
 
     if (PlayerSaveData)
     {
-        UE_LOG(LogTemp, Warning, TEXT("OreSpawner: Loaded Pickaxe Level from SaveData: %d"), PlayerSaveData->PickaxeLevel);
         return PlayerSaveData->PickaxeLevel;
     }
 
-    UE_LOG(LogTemp, Error, TEXT("OreSpawner: Failed to load PlayerSaveData, using default Pickaxe Level 1."));
     return 1;
+}
+
+int32 AOreSpawner::GetMaxOreLevelFromDataTable() const
+{
+    if (!OreDataTable) return 1;
+
+    TArray<FName> RowNames = OreDataTable->GetRowNames();
+    int32 MaxOreLevel = 1;
+
+    for (const FName& RowName : RowNames)
+    {
+        int32 Level = FCString::Atoi(*RowName.ToString());
+        MaxOreLevel = FMath::Max(MaxOreLevel, Level);
+    }
+
+    return MaxOreLevel;
 }
 
 // 플레이어 곡괭이 레벨 이하의 랜덤 광석 레벨 반환
 int32 AOreSpawner::GetRandomOreLevel(int32 PlayerPickaxeLevel)
 {
-    return FMath::RandRange(1, PlayerPickaxeLevel);
+    const int32 MinAllowedDifference = 3;
+
+    int32 MaxOreLevelFromData = GetMaxOreLevelFromDataTable();
+    int32 OreMax = FMath::Clamp(PlayerPickaxeLevel, 1, MaxOreLevelFromData);
+
+    int32 RawMin = OreMax - MinAllowedDifference;
+    int32 OreMin = FMath::Clamp(RawMin, 1, OreMax);
+
+    return FMath::RandRange(OreMin, OreMax);
 }
 
 // 콜리전 내부에서 랜덤한 위치 반환
@@ -138,11 +158,6 @@ FVector AOreSpawner::GetRandomSpawnLocation()
                 float Distance = FVector::Dist(ExistingOre->GetActorLocation(), CandidateLocation);
                 ClosestDistance = FMath::Min(ClosestDistance, Distance);
 
-                UE_LOG(LogTemp, Warning, TEXT("Checking distance: Existing (%s) -> New (%s), Distance: %f"),
-                    *ExistingOre->GetActorLocation().ToString(),
-                    *CandidateLocation.ToString(),
-                    Distance);
-
                 if (Distance < MinSpacing)
                 {
                     bIsFarEnough = false;
@@ -165,7 +180,6 @@ FVector AOreSpawner::GetRandomSpawnLocation()
         return FVector::ZeroVector; // 유효한 위치를 찾지 못하면 ZeroVector 반환
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("AOreSpawner: Successfully found spawn location: %s"), *SpawnLocation.ToString());
     return SpawnLocation;
 }
 
@@ -198,7 +212,6 @@ void AOreSpawner::SpawnInitialOres()
         if (RandomOreLevel <= 0)
         {
             RandomOreLevel = MaxOreLevel;
-            UE_LOG(LogTemp, Warning, TEXT("AOreSpawner: No valid OreLevel found. Using highest available level: %d"), RandomOreLevel);
         }
 
         AOre* NewOre = GetWorld()->SpawnActor<AOre>(AOre::StaticClass(), SpawnLocation, FRotator::ZeroRotator);
@@ -207,8 +220,6 @@ void AOreSpawner::SpawnInitialOres()
             NewOre->InitializeOre(RandomOreLevel, this);
             NewOre->Tags.Add(FName("Ore")); // "Ore" 태그 추가
             ActiveOres.Add(NewOre);
-
-            UE_LOG(LogTemp, Warning, TEXT("AOreSpawner: Spawned Ore (Level: %d) at %s"), RandomOreLevel, *SpawnLocation.ToString());
         }
     }
 }
@@ -235,7 +246,6 @@ int32 AOreSpawner::GetMaxOreLevel(int32 PlayerPickaxeLevel)
     if (PlayerPickaxeLevel >= MaxOreLevel)
     {
         MaxOreLevel = FMath::Max(1, PlayerPickaxeLevel - 1);
-        UE_LOG(LogTemp, Warning, TEXT("AOreSpawner: Player reached max pickaxe level. Adjusted MaxOreLevel: %d"), MaxOreLevel);
     }
     else
     {
@@ -258,8 +268,6 @@ void AOreSpawner::RespawnAllOres()
         }
     }
     ActiveOres.Empty(); // 리스트 초기화
-
-    UE_LOG(LogTemp, Warning, TEXT("AOreSpawner: All ores have been destroyed."));
 
     // 새로운 광석 생성
     SpawnInitialOres();

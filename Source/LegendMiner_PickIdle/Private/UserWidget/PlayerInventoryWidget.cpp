@@ -70,8 +70,12 @@ void UPlayerInventoryWidget::GenerateUI()
 
         // 광석 개수 텍스트 추가 (기본값 0)
         UTextBlock* OreQuantityText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *RowName.ToString());
+        FSlateFontInfo FontInfo = OreQuantityText->Font;
+        FontInfo.Size = 15;
+        FontInfo.OutlineSettings.OutlineSize = 5;
+        FontInfo.OutlineSettings.OutlineColor = FLinearColor::Black;
+        OreQuantityText->SetFont(FontInfo);
         OreQuantityText->SetText(FText::AsNumber(0));
-        OreQuantityText->SetFont(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Bold.ttf"), OreQuantityFontSize)); // ✅ 글꼴 크기 적용
 		OreQuantityText->SetLineHeightPercentage(0.9f); // 줄 간격 설정
 
         // UI 요소 배치
@@ -101,8 +105,6 @@ void UPlayerInventoryWidget::UpdateOreListBorderHeight()
 
     // OreListSizeBox의 높이를 패딩을 포함하여 설정
     OreListSizeBox->SetHeightOverride(TotalHeight + ListPadding);
-
-    UE_LOG(LogTemp, Warning, TEXT("OreListSizeBox height set to: %.2f"), TotalHeight + ListPadding);
 }
 
 void UPlayerInventoryWidget::UpdateInventoryList()
@@ -159,7 +161,6 @@ void UPlayerInventoryWidget::UpdatePickaxeUpgradeUI()
     FOreData* OreData = OreDataTable->FindRow<FOreData>(CurrentOreRowName, TEXT("Ore Lookup"));
     if (!OreData)
     {
-        UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: No ore data found for Pickaxe Level %d"), CurrentPickaxeLevel);
         PickaxeUpgradeBorder->RemoveFromParent(); // UI 제거
         return;
     }
@@ -168,7 +169,6 @@ void UPlayerInventoryWidget::UpdatePickaxeUpgradeUI()
     FPickaxeData* NextPickaxeData = PickaxeDataTable->FindRow<FPickaxeData>(NextPickaxeRowName, TEXT("Pickaxe Lookup"));
     if (!NextPickaxeData)
     {
-        UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: No pickaxe data found for Level %d"), CurrentPickaxeLevel + 1);
         PickaxeUpgradeBorder->RemoveFromParent(); // UI 제거
         return;
     }
@@ -181,8 +181,6 @@ void UPlayerInventoryWidget::UpdatePickaxeUpgradeUI()
 
     // 필요 골드 업데이트 (현재 곡괭이 레벨 +1 PickaxeData 기준)
     UpgradeMoneyQuantityText->SetText(FText::AsNumber(NextPickaxeData->UpgradeCostGold));
-
-    UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: Pickaxe Upgrade UI updated for Level %d"), CurrentPickaxeLevel);
 }
 
 void UPlayerInventoryWidget::UpdateGold(int32 NewGoldAmount)
@@ -211,7 +209,7 @@ void UPlayerInventoryWidget::OnSellOreClicked()
         int32 OreLevel = FCString::Atoi(*OreItem.OreID.ToString());
 
         // 판매 조건: 곡괭이 레벨보다 낮은 광석만 판매
-        if (OreLevel <= PickaxeLevel - 1 || (PickaxeLevel == 1 && OreLevel == 1))
+        if ((PickaxeLevel == 1 && OreLevel == 1) || (PickaxeLevel > 1 && OreLevel < PickaxeLevel))
         {
             OreIDsToSell.Add(OreItem.OreID);
         }
@@ -247,6 +245,19 @@ void UPlayerInventoryWidget::OnSellOreClicked()
 
     if (bOreSold) // 판매 성공 시 0.5초 후 채굴 재개
     {
+        // 판매 성공 메시지
+        ALegendMinerHUD* LegendMinerHUD = Cast<ALegendMinerHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
+        if (LegendMinerHUD)
+        {
+            LegendMinerHUD->ShowMessage(
+                FText::FromString(TEXT("광물이 성공적으로 판매되었습니다.")),
+                false,
+                this,
+                "OnOreSellConfirmed",
+                FText::FromString(TEXT("확인"))
+            );
+        }
+
         APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
         if (PlayerCharacter)
         {
@@ -260,7 +271,6 @@ void UPlayerInventoryWidget::OnSellOreClicked()
     // UI 업데이트
     UpdateInventoryList();
 }
-
 
 void UPlayerInventoryWidget::OnAllSellOreClicked()
 {
@@ -316,6 +326,19 @@ void UPlayerInventoryWidget::OnAllSellOreClicked()
 
     if (bOreSold) // 판매 성공 시 0.5초 후 채굴 재개
     {
+        // 판매 성공 메시지
+        ALegendMinerHUD* LegendMinerHUD = Cast<ALegendMinerHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
+        if (LegendMinerHUD)
+        {
+            LegendMinerHUD->ShowMessage(
+                FText::FromString(TEXT("광물이 성공적으로 판매되었습니다.")),
+                false,
+                this,
+                "OnOreSellConfirmed",
+                FText::FromString(TEXT("확인"))
+            );
+        }
+
         APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
         if (PlayerCharacter)
         {
@@ -453,8 +476,6 @@ void UPlayerInventoryWidget::OnUpgradePickaxeConfirmed(bool bConfirmed)
     {
         PlayerCharacter->StopMiningAndRestart();
     }
-
-    UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: Pickaxe upgraded successfully."));
 }
 
 
@@ -472,7 +493,5 @@ void UPlayerInventoryWidget::UpdateSingleOreQuantity(FName OreID, int32 NewQuant
     }
 
     OreQuantityText->SetText(FText::AsNumber(NewQuantity));
-
-    UE_LOG(LogTemp, Warning, TEXT("PlayerInventoryWidget: Updated OreID %s to %d"), *OreID.ToString(), NewQuantity);
 }
 

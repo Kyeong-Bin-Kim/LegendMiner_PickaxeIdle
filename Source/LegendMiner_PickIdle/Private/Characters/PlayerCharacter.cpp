@@ -232,7 +232,6 @@ void APlayerCharacter::SetTargetLocation(const FVector& NewTargetLocation)
 
 float APlayerCharacter::GetMiningSpeedBonus() const
 {
-    // 예: PickaxeComponent가 2.0, 5.0, 10.0 등의 배수를 반환
     if (PickaxeComponent)
     {
         return PickaxeComponent->GetMiningSpeedBonus();
@@ -256,12 +255,13 @@ void APlayerCharacter::FindClosestOre()
 
     for (AActor* Ore : Ores)
     {
-        float Distance = FVector::Dist(Ore->GetActorLocation(), GetActorLocation());
         AOre* OreActor = Cast<AOre>(Ore);
         if (OreActor && OreActor->OreTrigger)
         {
+            float Distance = FVector::Dist(Ore->GetActorLocation(), GetActorLocation());
             float TriggerRadius = OreActor->OreTrigger->GetScaledSphereRadius();
-            if (Distance < TriggerRadius && Distance < MinDistance)
+
+            if (Distance <= (TriggerRadius + OreSearchRadius) && Distance < MinDistance)
             {
                 MinDistance = Distance;
                 ClosestOre = OreActor;
@@ -366,7 +366,6 @@ void APlayerCharacter::StopMining()
 
     if (TargetOre)
     {
-        TargetOre->StopMining();
         TargetOre = nullptr;
     }
 }

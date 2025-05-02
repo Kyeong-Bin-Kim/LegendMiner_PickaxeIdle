@@ -33,6 +33,9 @@ private:
     UFUNCTION()
     int32 GetPlayerPickaxeLevel();
 
+    UFUNCTION()
+    int32 GetMaxOreLevelFromDataTable() const;
+
     // 광석 초기 스폰
     UFUNCTION()
     void SpawnInitialOres();

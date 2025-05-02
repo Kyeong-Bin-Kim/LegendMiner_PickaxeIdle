@@ -63,8 +63,6 @@ void UMainMenuWidget::UpdateUIBasedOnSaveData()
 // 메인 메뉴 닫기 함수 추가
 void UMainMenuWidget::CloseMainMenu()
 {
-    UE_LOG(LogTemp, Warning, TEXT("Closing Main Menu and switching to Game Input Mode"));
-
     ULegendMinerGameInstance* GameInstance = Cast<ULegendMinerGameInstance>(GetGameInstance());
 
     if (GameInstance)
@@ -79,15 +77,11 @@ void UMainMenuWidget::CloseMainMenu()
 // 선택된 레벨로 이동하는 함수 추가
 void UMainMenuWidget::OnStartGameClicked()
 {
-    UE_LOG(LogTemp, Warning, TEXT("Start Game button clicked!"));
-
     bool bHasSaveData = UGameplayStatics::DoesSaveGameExist(TEXT("PlayerSaveSlot"), 0);
 
     // 기존 세이브 데이터가 있을 경우, 메시지를 먼저 띄움
     if (bHasSaveData)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Existing save data found. Asking for confirmation..."));
-
         ALegendMinerHUD* LegendMinerHUD = Cast<ALegendMinerHUD>(GetOwningPlayer()->GetHUD());
         if (LegendMinerHUD)
         {
@@ -115,13 +109,10 @@ void UMainMenuWidget::OnNewGameConfirmed(bool bConfirmed)
         return;  // 사용자가 "아니오"를 선택하면 아무것도 하지 않음
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("User confirmed new game. Deleting save data and starting new game..."));
-
     // 기존 세이브 데이터 삭제
     if (UGameplayStatics::DoesSaveGameExist(TEXT("PlayerSaveSlot"), 0))
     {
         UGameplayStatics::DeleteGameInSlot(TEXT("PlayerSaveSlot"), 0);
-        UE_LOG(LogTemp, Warning, TEXT("Existing save data deleted."));
     }
 
     // 새 게임 시작
@@ -130,15 +121,12 @@ void UMainMenuWidget::OnNewGameConfirmed(bool bConfirmed)
 
 void UMainMenuWidget::StartNewGame()
 {
-    UE_LOG(LogTemp, Warning, TEXT("Creating new save data and starting game..."));
-
     // 새로운 세이브 데이터 생성
     UPlayerSaveData* NewSaveData = NewObject<UPlayerSaveData>();
     if (NewSaveData)
     {
         NewSaveData->InitializeSaveData();
         NewSaveData->SaveGameData();  // 새 데이터 즉시 저장
-        UE_LOG(LogTemp, Warning, TEXT("New save data created and saved."));
     }
     else
     {
@@ -152,7 +140,6 @@ void UMainMenuWidget::StartNewGame()
     // 선택된 레벨로 이동
     if (LevelToLoad.IsValid())
     {
-        UE_LOG(LogTemp, Warning, TEXT("Loading level: %s"), *LevelToLoad->GetName());
         UGameplayStatics::OpenLevelBySoftObjectPtr(this, LevelToLoad);
     }
     else

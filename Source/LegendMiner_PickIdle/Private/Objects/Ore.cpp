@@ -37,12 +37,12 @@ void AOre::BeginPlay()
 
     if (!CachedSaveData)
     {
-        UE_LOG(LogTemp, Error, TEXT("AOre: Failed to cache PlayerSaveData!"));
+        UE_LOG(LogTemp, Error, TEXT("AOre: 플레이어 저장 데이터를 캐싱하는 데 실패했습니다!"));
     }
 
     if (!PlayerRef)
     {
-        UE_LOG(LogTemp, Error, TEXT("AOre: Failed to cache PlayerCharacter!"));
+        UE_LOG(LogTemp, Error, TEXT("AOre: 플레이어 캐릭터 캐싱에 실패했습니다!"));
     }
 
 }
@@ -51,8 +51,6 @@ void AOre::InitializeOre(int32 InOreLevel, AOreSpawner* InSpawner)
 {
     OreLevel = InOreLevel;
     SpawnerRef = InSpawner;
-
-    UE_LOG(LogTemp, Warning, TEXT("AOre: Initialized with Level %d"), OreLevel);
 
     Tags.Add(FName("Ore"));
 
@@ -63,7 +61,7 @@ void AOre::UpdateOreAppearance()
 {
     if (!SpawnerRef || !SpawnerRef->OreDataTable)
     {
-        UE_LOG(LogTemp, Error, TEXT("AOre: SpawnerRef or OreDataTable is NULL"));
+        UE_LOG(LogTemp, Error, TEXT("AOre: 스포너 또는 광석 데이터 테이블이 없습니다."));
         return;
     }
 
@@ -72,8 +70,6 @@ void AOre::UpdateOreAppearance()
 
     if (!Data)
     {
-        UE_LOG(LogTemp, Error, TEXT("AOre: No data found for OreLevel: %d"), OreLevel);
-
         // 데이터가 없으면 가능한 최대 OreLevel 사용
         OreLevel = GetMaxOreLevel();
         RowName = FName(*FString::FromInt(OreLevel));
@@ -81,11 +77,9 @@ void AOre::UpdateOreAppearance()
 
         if (!Data)
         {
-            UE_LOG(LogTemp, Error, TEXT("AOre: No valid OreLevel found even after searching for the max level!"));
+            UE_LOG(LogTemp, Error, TEXT("AOre: 최대 레벨을 검색했지만 유효한 OreLevel을 찾을 수 없습니다!"));
             return;
         }
-
-        UE_LOG(LogTemp, Warning, TEXT("AOre: OreLevel updated to highest available level: %d"), OreLevel);
     }
 
     if (Data->Mesh)
@@ -123,7 +117,8 @@ int32 AOre::GetMaxOreLevel() const
 
 void AOre::StartMining(APlayerCharacter* Player)
 {
-    if (!Player || !SpawnerRef || !SpawnerRef->OreDataTable) return;
+    if (!Player || !SpawnerRef || !SpawnerRef->OreDataTable)
+        return;
 
     PlayerRef = Player;
 
@@ -135,42 +130,38 @@ void AOre::StartMining(APlayerCharacter* Player)
 
     float PickaxeBonus = Player->GetMiningSpeedBonus();
 
-	float CalculatedMiningTime = 0.f;
+    float CalculatedMiningTime = 0.f;
 
     if (PickaxeBonus <= 0.f)
     {
         CalculatedMiningTime = OreData->MiningTime;
     }
     else
-	{
-		CalculatedMiningTime = OreData->MiningTime / PickaxeBonus;
-	}
+    {
+        CalculatedMiningTime = OreData->MiningTime / PickaxeBonus;
+    }
 
     // 계산된 채굴 시간을 MiningTime에 할당
     MiningTime = CalculatedMiningTime;
-
-    GetWorldTimerManager().SetTimer(MiningTimerHandle, this, &AOre::MineOre, MiningTime * 1.166667, true);
-
-    UE_LOG(LogTemp, Warning, TEXT("AOre: Started mining with interval: %.2f"), CalculatedMiningTime);
 }
 
 void AOre::MineOre()
 {
     if (!PlayerRef)
     {
-        UE_LOG(LogTemp, Warning, TEXT("AOre: PlayerRef is NULL!"));
+        UE_LOG(LogTemp, Warning, TEXT("AOre: PlayerRef가 비어있습니다."));
         return;
     }
 
     if (!CachedSaveData)
     {
-        UE_LOG(LogTemp, Warning, TEXT("AOre: CachedSaveData is NULL, loading fresh data."));
+        UE_LOG(LogTemp, Warning, TEXT("AOre: 저장 데이터가 NULL입니다. 새로 불러옵니다."));
         CachedSaveData = UPlayerSaveData::LoadGameData();
     }
 
     if (!CachedSaveData)
     {
-        UE_LOG(LogTemp, Error, TEXT("AOre: Failed to load CachedSaveData!"));
+        UE_LOG(LogTemp, Error, TEXT("AOre: 저장 데이터를 불러오는 데 실패했습니다!"));
         return;
     }
 
@@ -185,18 +176,11 @@ void AOre::MineOre()
     {
         int32 GetQuantity = CachedSaveData->GetOreQuantity(MinedOreID);
         PlayerRef->CachedInventoryWidget->UpdateSingleOreQuantity(MinedOreID, GetQuantity);
-
-        UE_LOG(LogTemp, Warning, TEXT("AOre: Updated Inventory UI for OreID: %s, New Quantity: %d"), *MinedOreID.ToString(), GetQuantity);
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("AOre: CachedInventoryWidget is NULL!"));
+        UE_LOG(LogTemp, Warning, TEXT("AOre: 인벤토리 UI가 존재하지 않습니다!"));
     }
-}
-
-void AOre::StopMining()
-{
-    GetWorldTimerManager().ClearTimer(MiningTimerHandle);
 }
 
 void AOre::RefreshSaveData()
@@ -204,10 +188,10 @@ void AOre::RefreshSaveData()
     CachedSaveData = UPlayerSaveData::LoadGameData();
     if (CachedSaveData)
     {
-        UE_LOG(LogTemp, Warning, TEXT("AOre: Cached SaveData refreshed successfully!"));
+        UE_LOG(LogTemp, Warning, TEXT("AOre: 저장 데이터를 성공적으로 갱신했습니다."));
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("AOre: Failed to refresh Cached SaveData!"));
+        UE_LOG(LogTemp, Error, TEXT("AOre: 저장 데이터 갱신에 실패했습니다."));
     }
 }
