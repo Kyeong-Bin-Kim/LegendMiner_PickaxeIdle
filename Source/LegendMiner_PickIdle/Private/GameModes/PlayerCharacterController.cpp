@@ -25,6 +25,7 @@ void APlayerCharacterController::BeginPlay()
         CachedPlayerCharacter = Cast<APlayerCharacter>(PlayerPawn);
     }
 
+    // 입력 매핑 컨텍스트 등록
     if (InputMappingContext)
     {
         if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
@@ -42,7 +43,7 @@ void APlayerCharacterController::SetupInputComponent()
     {
         if (ClickMoveAction)
         {
-            EnhancedInput->BindAction(ClickMoveAction, ETriggerEvent::Triggered, this, &APlayerCharacterController::OnClickMove);
+            EnhancedInput->BindAction(ClickMoveAction, ETriggerEvent::Started, this, &APlayerCharacterController::OnClickMove);
         }
 
         if (ClickMoveAction)
@@ -54,12 +55,22 @@ void APlayerCharacterController::SetupInputComponent()
 
 void APlayerCharacterController::OnClickMove(const FInputActionValue& Value)
 {
+    if (!CanClickToMove() || !CachedPlayerCharacter)
+        return;
+
     FHitResult HitResult;
     GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
 
     if (HitResult.bBlockingHit && CachedPlayerCharacter)
     {
+        // 도착 시까지 클릭 입력 잠금
+        SetCanClickToMove(false);
+
+        // 캐릭터에게 클릭 위치 전달 → 해당 위치 기준 가장 가까운 광석으로 이동
         CachedPlayerCharacter->SetTargetLocation(HitResult.Location);
+
+        // 클릭 마커 액터 생성
+        SpawnClickMarkerAtLocation(HitResult.Location);
     }
 }
 
@@ -101,4 +112,21 @@ void APlayerCharacterController::OnExitConfirmed(bool bConfirmed)
 
     // 게임 종료 실행
     UKismetSystemLibrary::QuitGame(GWorld, nullptr, EQuitPreference::Quit, false);
+}
+
+void APlayerCharacterController::SpawnClickMarkerAtLocation(const FVector& WorldLocation)
+{
+    if (!ClickMarkerActorClass) return;
+
+    FActorSpawnParameters Params;
+    Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    FVector MarkerLocation = WorldLocation + FVector(0.f, 0.f, 2.f); // 살짝 띄워서 바닥에 묻히지 않게
+
+    GetWorld()->SpawnActor<AClickMarkerActor>(
+        ClickMarkerActorClass,
+        MarkerLocation,
+        FRotator::ZeroRotator,
+        Params
+    );
 }

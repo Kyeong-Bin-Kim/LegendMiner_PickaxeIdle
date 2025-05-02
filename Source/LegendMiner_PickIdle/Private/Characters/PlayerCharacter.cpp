@@ -2,6 +2,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "PlayerCharacterController.h"
 #include "Ore.h"
 #include "PickaxeComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -46,8 +47,15 @@ APlayerCharacter::APlayerCharacter()
     Camera->SetRelativeLocation(CameraLotation);
     Camera->SetRelativeRotation(CameraRotation);
 
+    // 회전은 입력이 아닌 이동 방향 기준
     bUseControllerRotationYaw = false;
     GetCharacterMovement()->bOrientRotationToMovement = false;
+
+    MessageWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("MessageWidget"));
+    MessageWidgetComponent->SetupAttachment(RootComponent);
+    MessageWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+    MessageWidgetComponent->SetDrawSize(FVector2D(300.f, 50.f));
+    MessageWidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, 120.f));
 }
 
 void APlayerCharacter::BeginPlay()
@@ -65,11 +73,24 @@ void APlayerCharacter::BeginPlay()
         if (HUD && HUD->PlayerInventoryWidgetInstance)
         {
             CachedInventoryWidget = HUD->PlayerInventoryWidgetInstance;
-            UE_LOG(LogTemp, Warning, TEXT("Cached PlayerInventoryWidget Successfully!"));
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("Failed to cache PlayerInventoryWidget!"));
+            UE_LOG(LogTemp, Error, TEXT("인벤토리 위젯 찾기 실패!"));
+        }
+    }
+
+    if (UUserWidget* Widget = MessageWidgetComponent->GetUserWidgetObject())
+    {
+        FloatingWidgetInstance = Cast<UFloatingMessageWidget>(Widget);
+        if (!FloatingWidgetInstance)
+        {
+            UE_LOG(LogTemp, Error, TEXT("❌ 위젯 캐스팅 실패"));
+        }
+
+        if (FloatingWidgetInstance)
+        {
+            FloatingWidgetInstance->SetMessageText(FText::GetEmpty());
         }
     }
 }
@@ -85,11 +106,47 @@ void APlayerCharacter::Tick(float DeltaTime)
         FVector ToTarget = TargetLocation - CurrentLocation;
         float Distance = ToTarget.Size();
 
-        if (Distance <= AcceptableDistance)
+        // 이동 시간 초과 체크
+        float CurrentTime = GetWorld()->GetTimeSeconds();
+        if ((CurrentTime - MoveStartTime) >= MaxMoveDuration)
+        {
+            if (APlayerCharacterController* PC = Cast<APlayerCharacterController>(GetController()))
+            {
+                PC->SetCanClickToMove(true);
+            }
+        }
+
+        // 도착 판정 거리 계산 (광석 트리거 반지름 + 허용 거리)
+        float ArrivalThreshold = AcceptableDistance;
+        if (TargetOre && TargetOre->OreTrigger)
+        {
+            float TriggerRadius = TargetOre->OreTrigger->GetScaledSphereRadius();
+            ArrivalThreshold += TriggerRadius;
+        }
+
+        // 도착했는지 체크
+        if (Distance <= ArrivalThreshold)
         {
             bMovingToTarget = false;
             CurrentSpeed = 0.f;
-            FindClosestOre(); // 광석 찾기
+
+            // 입력 다시 허용
+            if (APlayerCharacterController* PC = Cast<APlayerCharacterController>(GetController()))
+            {
+                PC->SetCanClickToMove(true);
+            }
+
+            HideFloatingMessage();
+
+            // 광석이면 회전 시작
+            if (TargetOre)
+            {
+                bLookingAtOre = true;
+            }
+            else
+            {
+                bLookingAtOre = false;
+            }
         }
         else
         {
@@ -105,25 +162,28 @@ void APlayerCharacter::Tick(float DeltaTime)
                 TargetRotation.Roll = 0.f;
                 FRotator CurrentRotation = GetActorRotation();
 
-				// 보간 회전
+                // 보간 회전
                 float RotationSpeed = 5.f;
                 FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, RotationSpeed);
                 SetActorRotation(NewRotation);
             }
+
             AddMovementInput(Direction, CurrentSpeed / MaxSpeed);
         }
     }
     else
     {
-        // 광석을 바라보고 있는 경우, 회전 로직
-        if (bLookingAtOre)
+        // 광석을 바라보는 중이라면 회전 처리
+        if (!bMovingToTarget)
         {
-            RotateTowardsOre(DeltaTime);
+            if (bLookingAtOre && TargetOre)
+            {
+                RotateTowardsOre(DeltaTime);
+            }
         }
     }
 
-
-    // 이동 속도 업데이트 (애니메이션 블루프린트에서 사용 가능)
+    // 애니메이션용 속도 업데이트
     Speed = GetVelocity().Size();
 }
 
@@ -134,10 +194,40 @@ void APlayerCharacter::SetTargetLocation(const FVector& NewTargetLocation)
         StopMining();
     }
 
-    FVector AdjustedLocation = NewTargetLocation;
-    AdjustedLocation.Z = GetActorLocation().Z;
-    TargetLocation = AdjustedLocation;
+    AOre* ClosestOre = FindClosestOreFromPoint(NewTargetLocation);
+
+    FVector FinalTarget;
+
+    if (ClosestOre)
+    {
+        TargetOre = ClosestOre;
+        FinalTarget = ClosestOre->GetActorLocation();
+    }
+    else
+    {
+        TargetOre = nullptr;
+        FinalTarget = NewTargetLocation;
+    }
+
+    FinalTarget.Z = GetActorLocation().Z;
+	TargetLocation = FinalTarget;
     bMovingToTarget = true;
+    MoveStartTime = GetWorld()->GetTimeSeconds();
+
+    FText MoveMessage = TargetOre ?
+        FText::FromString(TEXT("가까운 광석을 향해 이동 중...")) :
+        FText::FromString(TEXT("이동 중..."));
+
+    ShowFloatingMessage(MoveMessage);
+
+    if (APlayerCharacterController* PlayerController = Cast<APlayerCharacterController>(GetController()))
+    {
+        PlayerController->SpawnClickMarkerAtLocation(NewTargetLocation); // 클릭 지점
+        if (TargetOre)
+        {
+            PlayerController->SpawnClickMarkerAtLocation(FinalTarget); // 이동할 광석 앞 위치
+        }
+    }
 }
 
 float APlayerCharacter::GetMiningSpeedBonus() const
@@ -191,6 +281,34 @@ void APlayerCharacter::FindClosestOre()
     }
 }
 
+AOre* APlayerCharacter::FindClosestOreFromPoint(const FVector& SearchOrigin)
+{
+    TArray<AActor*> Ores;
+    UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("Ore"), Ores);
+
+    float MinDistance = FLT_MAX;
+    AOre* ClosestOre = nullptr;
+
+    for (AActor* Ore : Ores)
+    {
+        AOre* OreActor = Cast<AOre>(Ore);
+        if (OreActor && OreActor->OreTrigger)
+        {
+            float Distance = FVector::Dist(OreActor->GetActorLocation(), SearchOrigin);
+            float TriggerRadius = OreActor->OreTrigger->GetScaledSphereRadius();
+
+            // 트리거 반지름 + 허용 반경 이내인 경우 유효
+            if (Distance <= (TriggerRadius + OreSearchRadius) && Distance < MinDistance)
+            {
+                MinDistance = Distance;
+                ClosestOre = OreActor;
+            }
+        }
+    }
+
+    return ClosestOre;
+}
+
 void APlayerCharacter::RotateTowardsOre(float DeltaTime)
 {
     if (!TargetOre) return;
@@ -200,24 +318,36 @@ void APlayerCharacter::RotateTowardsOre(float DeltaTime)
     TargetRotation.Pitch = 0.f;
     TargetRotation.Roll = 0.f;
 
-	//bMining = true; -- 회전 용
-
-    //GetCharacterMovement()->Velocity = GetActorForwardVector() * 200.0f; -- 회전 용
-
     FRotator CurrentRotation = GetActorRotation();
 
     float RotationSpeed = 5.f;
     FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, RotationSpeed);
     SetActorRotation(NewRotation);
 
-    //bMining = false; -- 회전 용
-
     float AngleDiff = FMath::Abs(FMath::FindDeltaAngleDegrees(CurrentRotation.Yaw, TargetRotation.Yaw));
     if (AngleDiff < 3.0f)
     {
         bLookingAtOre = false;
-        StartMining(); // 광석 채굴 로직 시작
+        
+        // 광석 채굴 로직 시작
+        StartMining();
     }
+}
+
+void APlayerCharacter::ShowFloatingMessage(const FText& Message)
+{
+    UE_LOG(LogTemp, Warning, TEXT("👉 ShowFloatingMessage: %s"), *Message.ToString());
+
+    if (FloatingWidgetInstance)
+    {
+        FloatingWidgetInstance->SetMessageText(Message);
+        MessageWidgetComponent->SetVisibility(true);
+    }
+}
+
+void APlayerCharacter::HideFloatingMessage()
+{
+    MessageWidgetComponent->SetVisibility(false);
 }
 
 void APlayerCharacter::StartMining()
@@ -237,7 +367,7 @@ void APlayerCharacter::StopMining()
     if (TargetOre)
     {
         TargetOre->StopMining();
-        TargetOre = nullptr; // 필요하다면, 더 이상 타겟이 없음을 표시
+        TargetOre = nullptr;
     }
 }
 
@@ -245,6 +375,8 @@ void APlayerCharacter::StopMiningAndRestart()
 {
 	bLookingAtOre = false;
 	StopMining();
+
+    // 일정 시간 후 채굴 탐색 재시도
     GetWorld()->GetTimerManager().SetTimer(FindOreTimerHandle, this, &APlayerCharacter::FindClosestOre, 0.5f, false);
 }
 
