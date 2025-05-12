@@ -211,6 +211,9 @@ void UPickaxeComponent::UpgradePickaxe()
     // 곡괭이 외형 및 이펙트 변경
     SetPickaxeMesh();
     SetPickaxeEffect();
+
+    // 곡괭이 업그레이드 후 이펙트를 다시 손 소켓에 부착
+    AttachPickaxeToHand();
 }
 
 
